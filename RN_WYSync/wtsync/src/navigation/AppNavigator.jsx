@@ -7,6 +7,7 @@ import RegisterScreen from '../screens/RegisterScreen';
 import HomeScreen from '../screens/HomeScreen';
 import BottomNavigator from '../services/BottomTabNavigator';
 import ForgotPassword from '../screens/ForgotPasswordScreen';
+import EditProfile from '../screens/EditProfile';
 
 const Stack = createNativeStackNavigator();
 
@@ -25,6 +26,7 @@ const AppNavigator = () => {
                 <Stack.Screen name="Main" component={BottomNavigator}/>
                 <Stack.Screen name="Home" component={HomeScreen}/>
                 <Stack.Screen name="Forgotpassword" component={ForgotPassword}/>
+                <Stack.Screen name="EditProfile" component={EditProfile}/>
 
      </Stack.Navigator>
   )
