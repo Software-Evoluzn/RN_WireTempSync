@@ -7,6 +7,8 @@ from database.db import db
 from routes.auth import auth
 from routes.product import product
 
+from mqtt_service import start_mqtt
+
 app = Flask(__name__)
 
 CORS(app)
@@ -32,6 +34,7 @@ def home():
     }
 
 if __name__=="__main__":
+    start_mqtt()
 
     app.run(
 

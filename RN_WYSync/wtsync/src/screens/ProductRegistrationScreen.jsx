@@ -61,7 +61,7 @@ const parseQR = (raw) => {
 };
 
 
-const ProductRegistrationScreen = () => {
+const ProductRegistrationScreen = ({navigation}) => {
   const [showScanner, setShowScanner] = useState(true);
 
   const [product, setProduct] = useState(null);
@@ -133,7 +133,12 @@ const ProductRegistrationScreen = () => {
 
         Alert.alert(
           "Success",
-          response.message
+          response.message,[
+            {
+              text : "OK",
+              onPress:() => navigation.goBack(),
+            }
+          ]
         );
 
       } else {

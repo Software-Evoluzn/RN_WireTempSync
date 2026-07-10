@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback  } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   FlatList
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { getUserDetails } from '../services/AuthService';
 
@@ -19,9 +20,11 @@ const HomeScreen = ({ navigation }) => {
 
   const [products, setProducts] = useState([])
 
-  useEffect(() => {
+useFocusEffect(
+  useCallback(() => {
     loadHomeData();
-  }, []);
+  }, [])
+);
 
 
 
