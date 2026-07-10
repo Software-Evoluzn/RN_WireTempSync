@@ -63,12 +63,16 @@ def register_product():
         serial_no=data["serial_no"],
 
         mac_id=data["mac_id"],
-
-        purchase_date=purchase_date,
+        
+       purchase_date=purchase_date,
 
         warranty_year=1,
 
-        warranty_expiry=purchase_date + timedelta(days=365)
+        warranty_expiry=purchase_date + timedelta(days=365),
+        
+        online_status=False,
+       
+        
 
     )
     
@@ -81,6 +85,7 @@ def register_product():
     print("Model No:", product.model_no)
     print("Serial No:", product.serial_no)
     print("MAC ID:", product.mac_id)
+    print
     print("Warranty Expiry:", product.warranty_expiry)
 
     db.session.add(product)
@@ -154,10 +159,12 @@ def get_products():
                  "serial_no": product.serial_no,
 
                  "mac_id": product.mac_id,
+                 
+                "purchase_date": product.purchase_date.strftime("%Y-%m-%d"),
 
-                 "purchase_date": product.purchase_date.strftime("%Y-%m-%d"),
-
-                 "warranty_expiry": product.warranty_expiry.strftime("%Y-%m-%d")
+                 "warranty_expiry": product.warranty_expiry.strftime("%Y-%m-%d"),
+                 
+                 "online": product.online_status,
             })
             
             print("Returning Response:")

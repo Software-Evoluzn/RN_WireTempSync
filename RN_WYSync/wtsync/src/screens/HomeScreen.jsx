@@ -1,11 +1,12 @@
-import React, { useEffect, useState, useCallback  } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   StatusBar,
-  FlatList
+  FlatList,
+  Animated
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -19,12 +20,41 @@ const HomeScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
 
   const [products, setProducts] = useState([])
+  const intervalRef = useRef(null);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
-useFocusEffect(
-  useCallback(() => {
-    loadHomeData();
-  }, [])
-);
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.4,
+          duration: 700,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 700,
+          useNativeDriver: true
+        }),
+      ])
+    ).start();
+  }, []);
+
+
+  useFocusEffect(
+    useCallback(() => {
+      loadHomeData();
+
+      intervalRef.current = setInterval(() => {
+        loadHomeData();
+      }, 5000);//every 5 sec
+
+      return () => {
+        clearInterval(intervalRef.current);
+      }
+
+    }, [])
+  );
 
 
 
@@ -132,7 +162,7 @@ useFocusEffect(
               </TouchableOpacity>
             </View>
 
-           
+
 
           </>
         ) : (
@@ -155,10 +185,51 @@ useFocusEffect(
                       {item.device_name}
                     </Text>
 
-                    <View style={styles.activeBadge}>
-                      <Text style={styles.activeText}>
-                        Active
+                    <View
+                   
+
+
+                      style={[
+                        styles.statusBadge,
+                        {
+                          backgroundColor: item.online
+                            ? "#DCFCE7"
+                            : "#FEE2E2"
+                        }
+                      ]}>
+
+
+                      <Animated.View
+                        style={[
+                          styles.statusDot,
+                          {
+                            backgroundColor: item.online
+                              ? "#22C55E"
+                              : "#EF4444",
+                            transform: [{ scale: pulseAnim }],
+                            opacity: pulseAnim,
+                          }
+                        ]}
+                      />
+
+
+                      <Text
+                        style={[
+                          styles.statusBadgeText,
+                          {
+                            color: item.online
+                              ? "#15803D"
+                              : "#B91C1C"
+                          }
+                        ]}
+                      >
+
+                        {item.online ? "Online" : "Offline"}
+
                       </Text>
+
+
+
                     </View>
 
                   </View>
@@ -370,16 +441,35 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#F04438',
-    marginRight: 7,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 8,
   },
   statusText: {
     fontSize: 13,
     fontWeight: '600',
     color: '#B42318',
+  },
+
+  statusBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
   },
 
   button: {

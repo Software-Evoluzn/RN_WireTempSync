@@ -1,6 +1,11 @@
 import json
 import paho.mqtt.client as mqtt
 
+from datetime import datetime
+
+from database.db import db
+from models.RegisterProuct import RegisterProduct
+
 broker = "evoluzn.org"
 port = 18889
 username = "evzin_led"
@@ -12,6 +17,13 @@ client = mqtt.Client()
 client.username_pw_set(username, password)
 
 
+    
+flask_app = None
+def init_app(app):
+    global flask_app
+    flask_app = app
+
+
 def on_connect(client, userdata, flags, rc):
     print("=================================")
     print("Connected to MQTT Broker")
@@ -21,6 +33,7 @@ def on_connect(client, userdata, flags, rc):
         print("Connection Successful")
 
         client.subscribe("#")
+        # client.subscribe("WTS+/status")
         print("Subscribed to #")
 
     else:
@@ -28,10 +41,36 @@ def on_connect(client, userdata, flags, rc):
 
 
 def on_message(client, userdata, msg):
-    print("\n============== MQTT MESSAGE ==============")
-    print("Topic:", msg.topic)
-    print("Payload:", msg.payload.decode())
-    print("==========================================")
+    
+    topic = msg.topic
+    
+    #Ignore non-WTS devices
+    if not topic.startswith("WTS"):
+        return
+    
+    # print("\n============== MQTT MESSAGE ==============")
+    # print("Topic:", msg.topic)
+    # print("Payload:", msg.payload.decode())
+    # print("==========================================")
+    
+    serial = msg.topic.split("/")[0]
+    print("Searching Serial:", serial)
+    
+    with flask_app.app_context():
+       
+        product = RegisterProduct.query.filter_by(
+            serial_no=serial
+        ).first()
+        if product:
+
+            product.online_status = True
+            product.last_seen = datetime.utcnow()
+
+            db.session.commit()
+        
+        
+
+        
 
 
 def on_disconnect(client, userdata, rc):

@@ -14,6 +14,10 @@ class RegisterProduct(db.Model):
     model_no = db.Column(db.String(100), nullable=False)
     serial_no = db.Column(db.String(100), unique=True, nullable=False)
     mac_id = db.Column(db.String(100), nullable=False)
+    #new column added
+    online_status = db.Column(db.Boolean, default = False)
+    last_seen = db.Column(db.DateTime)
+    
     warranty_year = db.Column(db.Integer, default=1)
     purchase_date = db.Column(
         db.DateTime,

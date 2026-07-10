@@ -7,7 +7,7 @@ from database.db import db
 from routes.auth import auth
 from routes.product import product
 
-from mqtt_service import start_mqtt
+from mqtt_service import start_mqtt , init_app
 
 app = Flask(__name__)
 
@@ -20,6 +20,9 @@ db.init_app(app)
 with app.app_context():
 
     db.create_all()
+    
+# Give Flask app to MQTT
+init_app(app)
 
 app.register_blueprint(auth)
 app.register_blueprint(product)
