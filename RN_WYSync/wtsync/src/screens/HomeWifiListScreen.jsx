@@ -36,7 +36,7 @@ export default function HomeWifiListScreen({ navigation }) {
       const filteredList = wifiList.filter(item =>
         item.SSID &&
         item.SSID.length > 0 &&
-        !item.SSID.startsWith('ETS') &&   // ESP AP hide
+        !item.SSID.startsWith('ESP') &&   // ESP AP hide
         item.frequency >= 2400 &&
         item.frequency <= 2500
       );

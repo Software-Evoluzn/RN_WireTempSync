@@ -31,15 +31,57 @@ export default function PasswordScreen({ route, navigation }) {
   const [status, setStatus] = useState(STATUS.IDLE);
   const [errorMsg, setErrorMsg] = useState('');
 
+  const [phoneConnected, setPhoneConnected] = useState(false)
+  const phoneWifiTimer = useRef(null)
+
+  const stopPhoneWifiPolling = () => {
+    if (phoneWifiTimer.current) {
+      clearInterval(phoneWifiTimer.current);
+      phoneWifiTimer.current = null
+
+    }
+
+  };
+
+  const startPhoneWifiPolling = () => {
+    setPhoneConnected(false);
+
+    phoneWifiTimer.current = setInterval(async () => {
+      try {
+
+        const ssid = await WifiManager.getCurrentWifiSSID();
+
+        // Android sometimes returns SSID with quotes
+        const currentSSID = ssid.replace(/"/g, "");
+
+        console.log("Current SSID:", currentSSID);
+        console.log("Target SSID :", network.SSID);
+
+        if (currentSSID === network.SSID) {
+          stopPhoneWifiPolling();
+          setPhoneConnected(true);
+        }
+
+      } catch (error) {
+        console.log("SSID Check Error:", error);
+      }
+
+    }, 2000);
+  }
+
+  useEffect(() => {
+    return () => {
+      stopPolling();
+      stopPhoneWifiPolling();
+    };
+  }, []);
+
   // verification loop ke internal counters (re-render trigger na karein isliye refs)
   const pollTimer = useRef(null);
   const elapsedRef = useRef(0);
   const unreachableStreak = useRef(0);
 
-  useEffect(() => {
-    // cleanup: screen unmount ho to timer band karo
-    return () => stopPolling();
-  }, []);
+
 
   const stopPolling = () => {
     if (pollTimer.current) {
@@ -98,7 +140,7 @@ export default function PasswordScreen({ route, navigation }) {
       // NOTE: WiFiManager yahan 200 deta hai chahe password sahi ho ya galat.
       // Iska matlab sirf itna hai ki creds receive ho gaye — connect ka result abhi pata nahi.
       console.log('[wifisave] status:', res.status);
-      
+
     } catch (e) {
       // POST ke beech AP drop ho sakta hai (ESP switch kar raha hai) — ye normal hai,
       // hum verification phase me asli result nikaalenge.
@@ -148,6 +190,7 @@ export default function PasswordScreen({ route, navigation }) {
 
   const onSuccess = () => {
     setStatus(STATUS.SUCCESS);
+    startPhoneWifiPolling();
   };
 
   const onFailed = () => {
@@ -221,12 +264,21 @@ export default function PasswordScreen({ route, navigation }) {
               Device connected to this  "{network.SSID}" .
             </Text>
             <Text style={cardStyle.muted}>
-              Connect your phone to this  "{network.SSID} Network" .
-            </Text>
+              {phoneConnected
+                ? `✓ Phone connected to "${network.SSID}".`
+                : `Waiting for phone to connect to "${network.SSID}"...`
+              }
 
+            </Text>
+            ``
             <TouchableOpacity
-              onPress={() => navigation.navigate('DeviceConfig')}
-              style={cardStyle.primaryBtn}
+              disabled={!phoneConnected}
+
+              onPress={() => navigation.navigate('WtsDashboard')}
+              style={[
+                cardStyle.primaryBtn,
+                !phoneConnected && { opacity: 0.5 }
+              ]}
             >
               <Text style={cardStyle.primaryBtnText}>Continue</Text>
             </TouchableOpacity>
