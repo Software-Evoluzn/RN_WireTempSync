@@ -178,7 +178,20 @@ const HomeScreen = ({ navigation }) => {
               showVerticalScrollIndicator={false}
               contentContainerStyle={{ paddingBottom: 120 }}
               renderItem={({ item }) => (
-                <TouchableOpacity style={styles.productCard} activeOpacity={0.9}>
+                <TouchableOpacity style={styles.productCard}
+                  activeOpacity={0.9}
+                  onPress={() => {
+                    if (item.online) {
+                      navigation.navigate("WtsDashboard", {
+                        product: item,
+                      });
+                    } else {
+                      navigation.navigate("DeviceConfig", {
+                        product: item,
+                      });
+                    }
+                  }}
+                >
 
                   <View style={styles.productHeader}>
                     <Text style={styles.productName}>
@@ -186,7 +199,7 @@ const HomeScreen = ({ navigation }) => {
                     </Text>
 
                     <View
-                   
+
 
 
                       style={[

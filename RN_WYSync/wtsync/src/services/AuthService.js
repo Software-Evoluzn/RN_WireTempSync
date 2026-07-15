@@ -6,7 +6,7 @@ import { GoogleSignin, isSuccessResponse } from '@react-native-google-signin/goo
 export const registerUser = async (
     name,
     email,
-     password,
+    password,
     contact
 ) => {
     try {
@@ -16,13 +16,25 @@ export const registerUser = async (
         );
 
         //Firebase UID
-         console.log('Firebase UID =>', userCrdential.user.uid);
+        console.log('Firebase UID =>', userCrdential.user.uid);
 
         const uid = userCrdential.user.uid;
-        console.log("uid here " , uid)
+        console.log("uid here ", uid)
 
         //Flask API Call
         const BASE_URL = `http://${IP_ADDRESS}:5000`;
+        console.log('==============================');
+        console.log('Calling Flask Register API...');
+        console.log('URL:', `${BASE_URL}/register`);
+        console.log('Request Body:', {
+            firebase_uid: uid,
+            name: name,
+            email: email,
+            contact: contact,
+        });
+        console.log('==============================');
+
+
 
         const response = await fetch(
             `${BASE_URL}/register`,
@@ -40,10 +52,24 @@ export const registerUser = async (
             },
         );
 
+        console.log('HTTP Status:', response.status);
+        console.log('Response OK:', response.ok);
+
+       
+
+
         const data = await response.json();
 
-        console.log("sejal data " , data);
+         console.log('Parsed Response:', data);
+
+
+        console.log("sejal data ", data);
         console.log("response ", response)
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Registration API Failed');
+        }
+
 
 
         if (!data.success) {
@@ -55,6 +81,8 @@ export const registerUser = async (
         };
 
     } catch (error) {
+        console.log('Register Error:', error);
+
         return {
             success: false,
             message: error.message,
@@ -129,13 +157,13 @@ export const googleLogin = async () => {
         const userCredential = await auth().signInWithCredential(credential);
         console.log("Firebase User:", userCredential.user);
 
-         // ===============================
+        // ===============================
         // Save Google user in MySQL
         // ===============================
 
-           const BASE_URL = `http://${IP_ADDRESS}:5000`;
+        const BASE_URL = `http://${IP_ADDRESS}:5000`;
 
-           const apiResponse = await fetch(`${BASE_URL}/register`, {
+        const apiResponse = await fetch(`${BASE_URL}/register`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -146,10 +174,10 @@ export const googleLogin = async () => {
                 email: userCredential.user.email,
                 contact: userCredential.user.phoneNumber || "",
             }),
-        }); 
-         const data = await apiResponse.json();
+        });
+        const data = await apiResponse.json();
 
-            console.log("Flask Response:", data);
+        console.log("Flask Response:", data);
         return {
             success: true,
             user: userCredential.user,
@@ -180,32 +208,32 @@ export const forgotPassword = async (email) => {
 };
 
 
-export const getUserDetails = async()=>{
-    try{
-        const uid =auth().currentUser.uid;
+export const getUserDetails = async () => {
+    try {
+        const uid = auth().currentUser.uid;
         const BASE_URL = `http://${IP_ADDRESS}:5000`;
 
-        const response = await fetch(`${BASE_URL}/get-user`,{
-            method:'POST',
-            headers:{
-                'Content-Type':'application/json',
+        const response = await fetch(`${BASE_URL}/get-user`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
 
             },
-            body:JSON.stringify({
-                firebase_uid:uid,
+            body: JSON.stringify({
+                firebase_uid: uid,
             }),
 
         });
 
         const data = await response.json();
-        console.log("get user data ",data);
+        console.log("get user data ", data);
 
         return data;
 
-    } catch(error){
+    } catch (error) {
         return {
-            success:false,
-            message:error.message,
+            success: false,
+            message: error.message,
         }
 
     }

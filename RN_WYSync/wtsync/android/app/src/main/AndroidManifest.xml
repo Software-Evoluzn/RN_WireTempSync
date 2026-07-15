@@ -4,6 +4,24 @@
   <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.CAMERA"/>
 
+    <!-- WiFi / Network -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
+    <!-- Location (needed for WiFi scanning on Android < 13) -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+
+    <!-- Android 13+ WiFi scanning -->
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES" />
+
+    <!-- 🔥 IMPORTANT for mDNS / Zeroconf / Service Discovery -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
+
+    <!-- Optional but helpful for multicast stability -->
+    <uses-permission android:name="android.permission.WAKE_LOCK"/>
+
     <application
       android:name=".MainApplication"
       android:label="@string/app_name"
@@ -11,7 +29,8 @@
       android:roundIcon="@mipmap/ic_launcher_round"
       android:allowBackup="false"
       android:theme="@style/AppTheme"
-      android:usesCleartextTraffic="${usesCleartextTraffic}"
+      android:usesCleartextTraffic="true"
+       android:networkSecurityConfig="@xml/network_security_config"
       android:supportsRtl="true">
       <activity
         android:name=".MainActivity"
