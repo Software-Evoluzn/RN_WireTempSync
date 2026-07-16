@@ -4,6 +4,7 @@ import {
   SafeAreaView,
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   ScrollView,
   Alert,
@@ -13,12 +14,8 @@ import {
 import { Camera } from 'react-native-camera-kit';
 import { styles } from '../styles/styles';
 
-import { registerProduct } from '../services/ProductApi'
+import { registerProduct } from '../services/ProductApi';
 import { getUserDetails } from '../services/AuthService';
-
-
-
-
 
 
 const parseQR = (raw) => {
@@ -61,17 +58,29 @@ const parseQR = (raw) => {
 };
 
 
-const ProductRegistrationScreen = ({navigation}) => {
-  const [showScanner, setShowScanner] = useState(true);
+const EMPTY_FORM = {
+  'Device Name': '',
+  'Model No': '',
+  'Serial No': '',
+  'MAC ID': '',
+  'MDF By': '',
+};
+
+
+const ProductRegistrationScreen = ({ navigation }) => {
+  // mode: 'scan' | 'manual'
+  const [mode, setMode] = useState('scan');
 
   const [product, setProduct] = useState(null);
+
+  const [manualForm, setManualForm] = useState(EMPTY_FORM);
 
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [purchaseDate, setPurchaseDate] = useState(new Date());
 
   const [user, setUser] = useState('');
- 
+
 
   useEffect(() => {
     loadUser();
@@ -85,21 +94,55 @@ const ProductRegistrationScreen = ({navigation}) => {
       if (result?.success) setUser(result.user);
     } catch (e) {
       console.log('Failed to load user:', e);
-    } 
+    }
+  };
+
+  // Switch between scan / manual and reset previous data
+  const switchMode = (newMode) => {
+    if (newMode === mode) return;
+
+    setMode(newMode);
+    setProduct(null);
+    
+    setManualForm(EMPTY_FORM);
+  };
+
+  const updateManualField = (key, value) => {
+    setManualForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // Validate manual form and move to product details
+  const onManualSubmit = () => {
+    const required = ['Device Name', 'Model No', 'Serial No', 'MAC ID'];
+
+    const missing = required.filter(
+      (key) => !manualForm[key] || !manualForm[key].trim()
+    );
+
+    if (missing.length > 0) {
+      Alert.alert(
+        'Missing Fields',
+        `Please fill: ${missing.join(', ')}`
+      );
+      return;
+    }
+
+    // trim all values before saving
+    const cleaned = {};
+    Object.keys(manualForm).forEach((key) => {
+      cleaned[key] = manualForm[key].trim();
+    });
+
+    setProduct(cleaned);
   };
 
   const onRegister = async () => {
-
-     if(!user) {
-       console.log("user not found to sejal ")
-        Alert.alert("Please wait", "User information is loading.");
-        return;
-      }
+    if (!user) {
+      Alert.alert('Please wait', 'User information is loading.');
+      return;
+    }
 
     const body = {
-
-     
-
       firebase_uid: user.firebase_uid,
 
       user_name: user.name,
@@ -108,84 +151,65 @@ const ProductRegistrationScreen = ({navigation}) => {
 
       contact: user.contact,
 
-      device_name: product["Device Name"],
+      device_name: product['Device Name'],
 
-      model_no: product["Model No"],
+      model_no: product['Model No'],
 
-      serial_no: product["Serial No"],
+      serial_no: product['Serial No'],
 
-      mac_id: product["MAC ID"],
+      mac_id: product['MAC ID'],
 
       purchase_date: purchaseDate
         .toISOString()
-        .split("T")[0]
-
+        .split('T')[0],
     };
 
-      console.log("Sejal want to see the data " , body);
-
-
     try {
-
       const response = await registerProduct(body);
 
       if (response.success) {
-
         Alert.alert(
-          "Success",
-          response.message,[
+          'Success',
+          response.message, [
             {
-              text : "OK",
-              onPress:() => navigation.goBack(),
-            }
+              text: 'OK',
+              onPress: () => navigation.goBack(),
+            },
           ]
         );
-
       } else {
-
         Alert.alert(
-          "Error",
+          'Error',
           response.message
         );
-
       }
-
     } catch (e) {
-
       Alert.alert(
-        "Error",
-        "Unable to connect to server."
+        'Error',
+        'Unable to connect to server.'
       );
-
     }
-
   };
 
 
   const scanAnimation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-
     Animated.loop(
-
       Animated.sequence([
-
         Animated.timing(scanAnimation, {
           toValue: 240,
           duration: 1800,
-          useNativeDriver: true
+          useNativeDriver: true,
         }),
 
         Animated.timing(scanAnimation, {
           toValue: 0,
           duration: 1800,
-          useNativeDriver: true
-        })
-
+          useNativeDriver: true,
+        }),
       ])
-
     ).start();
-
   }, []);
 
   const onReadCode = (event) => {
@@ -199,20 +223,15 @@ const ProductRegistrationScreen = ({navigation}) => {
     }
 
     setProduct(parsed);
-
-    setShowScanner(false);
   };
 
   const onDateChange = (event, selectedDate) => {
-
     setShowDatePicker(false);
 
     if (selectedDate) {
       setPurchaseDate(selectedDate);
     }
-
   };
-
 
 
   return (
@@ -225,12 +244,50 @@ const ProductRegistrationScreen = ({navigation}) => {
         </Text>
 
 
+        {/* Mode Toggle: Scan QR / Manual Entry */}
 
-        {/* Scan Button */}
+        <View style={styles.modeToggleContainer}>
 
-   
-        {/* Scanner */}
-        {showScanner && (
+          <TouchableOpacity
+            style={[
+              styles.modeButton,
+              mode === 'scan' && styles.modeButtonActive,
+            ]}
+            onPress={() => switchMode('scan')}>
+
+            <Text
+              style={[
+                styles.modeButtonText,
+                mode === 'scan' && styles.modeButtonTextActive,
+              ]}>
+              Scan QR
+            </Text>
+
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.modeButton,
+              mode === 'manual' && styles.modeButtonActive,
+            ]}
+            onPress={() => switchMode('manual')}>
+
+            <Text
+              style={[
+                styles.modeButtonText,
+                mode === 'manual' && styles.modeButtonTextActive,
+              ]}>
+              Enter Manually
+            </Text>
+
+          </TouchableOpacity>
+
+        </View>
+
+
+        {/* Scanner (only in scan mode, before product is captured) */}
+
+        {mode === 'scan' && !product && (
           <View style={styles.scannerContainer}>
 
             <View style={styles.cameraBox}>
@@ -247,10 +304,10 @@ const ProductRegistrationScreen = ({navigation}) => {
                   {
                     transform: [
                       {
-                        translateY: scanAnimation
-                      }
-                    ]
-                  }
+                        translateY: scanAnimation,
+                      },
+                    ],
+                  },
                 ]}
               />
 
@@ -271,9 +328,79 @@ const ProductRegistrationScreen = ({navigation}) => {
           </View>
         )}
 
+
+        {/* Manual Entry Form (only in manual mode, before product is set) */}
+
+        {mode === 'manual' && !product && (
+          <View style={styles.card}>
+
+            <Text style={styles.cardTitle}>
+              Enter Product Details
+            </Text>
+
+            <Text style={styles.inputLabel}>Device Name *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. Smart Router X200"
+              placeholderTextColor="#999"
+              value={manualForm['Device Name']}
+              onChangeText={(text) => updateManualField('Device Name', text)}
+            />
+
+            <Text style={styles.inputLabel}>Model No *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. RX-200-IN"
+              placeholderTextColor="#999"
+              autoCapitalize="characters"
+              value={manualForm['Model No']}
+              onChangeText={(text) => updateManualField('Model No', text)}
+            />
+
+            <Text style={styles.inputLabel}>Serial No *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. SN123456789"
+              placeholderTextColor="#999"
+              autoCapitalize="characters"
+              value={manualForm['Serial No']}
+              onChangeText={(text) => updateManualField('Serial No', text)}
+            />
+
+            <Text style={styles.inputLabel}>MAC ID *</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. AA:BB:CC:DD:EE:FF"
+              placeholderTextColor="#999"
+              autoCapitalize="characters"
+              value={manualForm['MAC ID']}
+              onChangeText={(text) => updateManualField('MAC ID', text)}
+            />
+
+            <Text style={styles.inputLabel}>Manufacturer (optional)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. ABC Electronics"
+              placeholderTextColor="#999"
+              value={manualForm['MDF By']}
+              onChangeText={(text) => updateManualField('MDF By', text)}
+            />
+
+            <TouchableOpacity
+              style={styles.registerButton}
+              onPress={onManualSubmit}>
+
+              <Text style={styles.registerButtonText}>
+                Continue
+              </Text>
+
+            </TouchableOpacity>
+
+          </View>
+        )}
+
+
         {/* Product Details */}
-
-
 
         {product && (
 
@@ -308,6 +435,22 @@ const ProductRegistrationScreen = ({navigation}) => {
               value={product['MDF By']}
             />
 
+            {/* Edit / rescan option */}
+            <TouchableOpacity
+              onPress={() => {
+                if (mode === 'manual') {
+                  // go back to the form with existing values
+                  setManualForm({ ...EMPTY_FORM, ...product });
+                }
+                setProduct(null);
+              }}>
+
+              <Text style={styles.editLink}>
+                {mode === 'scan' ? 'Scan Again' : 'Edit Details'}
+              </Text>
+
+            </TouchableOpacity>
+
           </View>
 
         )}
@@ -324,7 +467,7 @@ const ProductRegistrationScreen = ({navigation}) => {
             <TouchableOpacity
               style={styles.dateButton}
               onPress={() => {
-                setShowDatePicker(true)
+                setShowDatePicker(true);
               }}>
 
               <Text style={styles.dateText}>
@@ -362,10 +505,6 @@ const ProductRegistrationScreen = ({navigation}) => {
 
         )}
 
-
-
-
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -380,7 +519,7 @@ const Row = ({ label, value }) => {
       </Text>
 
       <Text style={styles.value}>
-        {value}
+        {value || '-'}
       </Text>
 
     </View>
@@ -388,4 +527,3 @@ const Row = ({ label, value }) => {
 };
 
 export default ProductRegistrationScreen;
-

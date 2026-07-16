@@ -227,4 +227,57 @@ export const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
   },
+
+
+  modeToggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#eee',
+    borderRadius: 10,
+    padding: 4,
+    marginBottom: 16,
+  },
+  modeButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modeButtonActive: {
+    backgroundColor: '#fff',
+    elevation: 2,
+  },
+  modeButtonText: {
+    fontSize: 14,
+    color: '#777',
+    fontWeight: '500',
+  },
+  modeButtonTextActive: {
+    color: '#000',
+    fontWeight: '700',
+  },
+  inputLabel: {
+    fontSize: 13,
+    color: '#555',
+    marginTop: 10,
+    marginBottom: 4,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: '#000',
+    backgroundColor: '#fafafa',
+  },
+  editLink: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'right',
+    marginTop: 10,
+  },
 });
+
+
