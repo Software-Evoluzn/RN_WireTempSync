@@ -2,7 +2,7 @@ import firebase from '@react-native-firebase/app';
 import auth from '@react-native-firebase/auth'
 import IP_ADDRESS from '../services/ipconfig'
 
-const BASE_URL = `http://${IP_ADDRESS}:5000`;
+const BASE_URL = `http://${IP_ADDRESS}:5006`;
 
 export const registerProduct = async (product) => {
 

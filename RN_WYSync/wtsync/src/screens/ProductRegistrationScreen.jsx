@@ -103,7 +103,7 @@ const ProductRegistrationScreen = ({ navigation }) => {
 
     setMode(newMode);
     setProduct(null);
-    
+
     setManualForm(EMPTY_FORM);
   };
 
@@ -212,7 +212,7 @@ const ProductRegistrationScreen = ({ navigation }) => {
     ).start();
   }, []);
 
-  const onReadCode = (event) => {
+  const onReadCode = (event) => {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
     const qrData = event.nativeEvent.codeStringValue;
 
     const parsed = parseQR(qrData);

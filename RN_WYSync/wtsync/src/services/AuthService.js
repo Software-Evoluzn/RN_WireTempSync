@@ -22,7 +22,7 @@ export const registerUser = async (
         console.log("uid here ", uid)
 
         //Flask API Call
-        const BASE_URL = `http://${IP_ADDRESS}:5000`;
+        const BASE_URL = `http://${IP_ADDRESS}:5006`;
         console.log('==============================');
         console.log('Calling Flask Register API...');
         console.log('URL:', `${BASE_URL}/register`);
@@ -161,7 +161,7 @@ export const googleLogin = async () => {
         // Save Google user in MySQL
         // ===============================
 
-        const BASE_URL = `http://${IP_ADDRESS}:5000`;
+        const BASE_URL = `http://${IP_ADDRESS}:5006`;
 
         const apiResponse = await fetch(`${BASE_URL}/register`, {
             method: "POST",
@@ -211,7 +211,7 @@ export const forgotPassword = async (email) => {
 export const getUserDetails = async () => {
     try {
         const uid = auth().currentUser.uid;
-        const BASE_URL = `http://${IP_ADDRESS}:5000`;
+        const BASE_URL = `http://${IP_ADDRESS}:5006`;
 
         const response = await fetch(`${BASE_URL}/get-user`, {
             method: 'POST',
