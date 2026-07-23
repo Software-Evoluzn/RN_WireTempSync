@@ -5,6 +5,8 @@ from flask import jsonify
 from database.db import db
 from datetime import datetime, timedelta
 from models.RegisterProuct import RegisterProduct
+from models.control_panel import ControlPanel 
+
 
 product = Blueprint("product", __name__)
 
@@ -71,6 +73,16 @@ def register_product():
         warranty_expiry=purchase_date + timedelta(days=365),
         
         online_status=False,
+        
+        threshold_value=data.get("threshold_value"),
+        
+        email_enabled=data.get("email_enabled", False),
+        
+        alert_email=data.get("alert_email"),
+        
+        sms_enabled=data.get("sms_enabled", False),
+         
+        sms_phone=data.get('sms_phone')
        
         
 
@@ -85,8 +97,13 @@ def register_product():
     print("Model No:", product.model_no)
     print("Serial No:", product.serial_no)
     print("MAC ID:", product.mac_id)
-    print
     print("Warranty Expiry:", product.warranty_expiry)
+    print("thresold_value" ,product.threshold_value)
+    print("email_enabled" , product.email_enabled)
+    print("alert_email", product.alert_email)
+    print("sms_enabled" ,  product.sms_enabled )
+    print("alert_phone",product.sms_phone)
+    
 
     db.session.add(product)
 
@@ -111,11 +128,11 @@ def get_products():
         print("GET PRODUCTS API CALLED")
         data = request.get_json()
         
-        print("Received Data:", data)
+        # print("Received Data:", data)
         
         firebase_uid = data.get("firebase_uid")
         
-        print("Firebase UID:", firebase_uid)
+        # print("Firebase UID:", firebase_uid)
 
         
         if not firebase_uid:
@@ -126,7 +143,7 @@ def get_products():
                 "message" : "Firebase UID is required"
             }),400
             
-        print("Searching products in database...")
+        # print("Searching products in database...")
             
         products = RegisterProduct.query.filter_by(firebase_uid=firebase_uid).all()
         
@@ -140,14 +157,6 @@ def get_products():
         product_list = []
         
         for product in products:
-            print("----------------------------------------")
-            print("Product ID:", product.id)
-            print("Device Name:", product.device_name)
-            print("Model No:", product.model_no)
-            print("Serial No:", product.serial_no)
-            print("MAC ID:", product.mac_id)
-            print("Purchase Date:", product.purchase_date)
-            print("Warranty Expiry:", product.warranty_expiry)
         
             product_list.append({
                  "id": product.id,
@@ -165,14 +174,62 @@ def get_products():
                  "warranty_expiry": product.warranty_expiry.strftime("%Y-%m-%d"),
                  
                  "online": product.online_status,
+                 
+                 "threshold_value": product.threshold_value,
+                 
+                 "email_enabled": product.email_enabled,
+                 
+                "alert_email": product.alert_email,
+                  
+                "sms_enabled": product.sms_enabled,
+                
+                "alert_phone": product.sms_phone
+                 
+                 
             })
             
-            print("Returning Response:")
-            print(product_list)
-            print("========================================")
+            # print("Returning Response:")
+            # print(product_list)
+            # print("========================================")
 
         
         return jsonify({
             "success":True,
             "products":product_list
         }),200
+
+# ... [Keep your existing /register-product and /get-products routes] ...
+
+@product.route("/update-panel-name", methods=["POST"])
+def update_panel_name():
+    print("\n================= UPDATE PANEL NAME API CALLED =================")
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({"success": False, "message": "No data received"}), 400
+
+    serial = data.get("serial_no")
+    index = data.get("panel_index")
+    new_name = data.get("custom_name")
+
+    if not serial or not index or not new_name:
+        return jsonify({"success": False, "message": "Missing required fields"}), 400
+
+    # Check if a custom name already exists for this exact device and panel
+    panel = ControlPanel.query.filter_by(serial_no=serial, panel_index=index).first()
+    
+    if not panel:
+        print(f"Creating new custom name '{new_name}' for {serial} Panel {index}")
+        panel = ControlPanel(serial_no=serial, panel_index=index, custom_name=new_name)
+        db.session.add(panel)
+    else:
+        print(f"Updating custom name to '{new_name}' for {serial} Panel {index}")
+        panel.custom_name = new_name
+        
+    db.session.commit()
+    print("==============================================================\n")
+    
+    return jsonify({
+        "success": True, 
+        "message": "Panel renamed successfully!"
+    }), 200

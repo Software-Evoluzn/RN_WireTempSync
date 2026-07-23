@@ -27,4 +27,9 @@ class RegisterProduct(db.Model):
         db.DateTime,
         default=lambda: datetime.utcnow() + timedelta(days=365)
     )
+    threshold_value=db.Column(db.Float,nullable=True)
+    email_enabled = db.Column(db.Boolean,default=False)
+    alert_email=db.Column(db.String(150),nullable=True)
+    sms_enabled = db.Column(db.Boolean,default= False)
+    sms_phone=db.Column(db.String(20),nullable=True)
     

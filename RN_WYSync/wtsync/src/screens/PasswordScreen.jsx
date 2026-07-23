@@ -129,7 +129,7 @@ export default function PasswordScreen({ route, navigation }) {
       const controller = new AbortController();
       const t = setTimeout(() => controller.abort(), 12000);
 
-      const res = await fetch(`${ESP_AP_IP}/wifisave`, {
+      const res = await fetch(`${ESP_AP_IP}/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `s=${encodeURIComponent(network.SSID)}&p=${encodeURIComponent(password)}`,
@@ -274,7 +274,7 @@ export default function PasswordScreen({ route, navigation }) {
             <TouchableOpacity
               disabled={!phoneConnected}
 
-              onPress={() => navigation.navigate('WtsDashboard')}
+              onPress={() => navigation.navigate('Home')}
               style={[
                 cardStyle.primaryBtn,
                 !phoneConnected && { opacity: 0.5 }

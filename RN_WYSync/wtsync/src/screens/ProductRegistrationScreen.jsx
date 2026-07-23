@@ -8,11 +8,12 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Animated
+  Animated,
+  StyleSheet,
 } from 'react-native';
 
 import { Camera } from 'react-native-camera-kit';
-import { styles } from '../styles/styles';
+import Feather from 'react-native-vector-icons/Feather';
 
 import { registerProduct } from '../services/ProductApi';
 import { getUserDetails } from '../services/AuthService';
@@ -80,6 +81,11 @@ const ProductRegistrationScreen = ({ navigation }) => {
   const [purchaseDate, setPurchaseDate] = useState(new Date());
 
   const [user, setUser] = useState('');
+  const [thresholdValue, setThresholdValue] = useState('');
+  const [emailEnabled, setEmailEnabled] = useState(false);
+  const [smsEnabled, setSmsEnabled] = useState(false);
+  const [alertEmail, setAlertEmail] = useState('');
+  const [smsPhone, setSmsPhone] = useState('');
 
 
   useEffect(() => {
@@ -162,6 +168,16 @@ const ProductRegistrationScreen = ({ navigation }) => {
       purchase_date: purchaseDate
         .toISOString()
         .split('T')[0],
+
+      threshold_value: parseFloat(thresholdValue),
+
+      email_enabled: emailEnabled,
+
+      alert_email: alertEmail,
+
+      sms_enabled: smsEnabled,
+
+      sms_phone: smsPhone,
     };
 
     try {
@@ -171,11 +187,11 @@ const ProductRegistrationScreen = ({ navigation }) => {
         Alert.alert(
           'Success',
           response.message, [
-            {
-              text: 'OK',
-              onPress: () => navigation.goBack(),
-            },
-          ]
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack(),
+          },
+        ]
         );
       } else {
         Alert.alert(
@@ -212,7 +228,7 @@ const ProductRegistrationScreen = ({ navigation }) => {
     ).start();
   }, []);
 
-  const onReadCode = (event) => {                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 
+  const onReadCode = (event) => {
     const qrData = event.nativeEvent.codeStringValue;
 
     const parsed = parseQR(qrData);
@@ -237,10 +253,13 @@ const ProductRegistrationScreen = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
         <Text style={styles.screenTitle}>
           Register Product
+        </Text>
+        <Text style={styles.screenSubtitle}>
+          Scan a device QR code or enter its details manually
         </Text>
 
 
@@ -253,7 +272,15 @@ const ProductRegistrationScreen = ({ navigation }) => {
               styles.modeButton,
               mode === 'scan' && styles.modeButtonActive,
             ]}
+            activeOpacity={0.85}
             onPress={() => switchMode('scan')}>
+
+            <Feather
+              name="camera"
+              size={15}
+              color={mode === 'scan' ? '#0B0D12' : '#9CA3AF'}
+              style={styles.modeIcon}
+            />
 
             <Text
               style={[
@@ -270,7 +297,15 @@ const ProductRegistrationScreen = ({ navigation }) => {
               styles.modeButton,
               mode === 'manual' && styles.modeButtonActive,
             ]}
+            activeOpacity={0.85}
             onPress={() => switchMode('manual')}>
+
+            <Feather
+              name="edit-3"
+              size={15}
+              color={mode === 'manual' ? '#0B0D12' : '#9CA3AF'}
+              style={styles.modeIcon}
+            />
 
             <Text
               style={[
@@ -322,7 +357,7 @@ const ProductRegistrationScreen = ({ navigation }) => {
             </View>
 
             <Text style={styles.scanText}>
-              Align QR Code inside the frame
+              Align QR code inside the frame
             </Text>
 
           </View>
@@ -338,61 +373,73 @@ const ProductRegistrationScreen = ({ navigation }) => {
               Enter Product Details
             </Text>
 
-            <Text style={styles.inputLabel}>Device Name *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Smart Router X200"
-              placeholderTextColor="#999"
-              value={manualForm['Device Name']}
-              onChangeText={(text) => updateManualField('Device Name', text)}
-            />
+            <View style={styles.fieldGroup}>
+              <Text style={styles.inputLabel}>Device Name *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. Smart Router X200"
+                placeholderTextColor="#B4B7C0"
+                value={manualForm['Device Name']}
+                onChangeText={(text) => updateManualField('Device Name', text)}
+              />
+            </View>
 
-            <Text style={styles.inputLabel}>Model No *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. RX-200-IN"
-              placeholderTextColor="#999"
-              autoCapitalize="characters"
-              value={manualForm['Model No']}
-              onChangeText={(text) => updateManualField('Model No', text)}
-            />
+            <View style={styles.fieldGroup}>
+              <Text style={styles.inputLabel}>Model No *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. RX-200-IN"
+                placeholderTextColor="#B4B7C0"
+                autoCapitalize="characters"
+                value={manualForm['Model No']}
+                onChangeText={(text) => updateManualField('Model No', text)}
+              />
+            </View>
 
-            <Text style={styles.inputLabel}>Serial No *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. SN123456789"
-              placeholderTextColor="#999"
-              autoCapitalize="characters"
-              value={manualForm['Serial No']}
-              onChangeText={(text) => updateManualField('Serial No', text)}
-            />
+            <View style={styles.fieldGroup}>
+              <Text style={styles.inputLabel}>Serial No *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. SN123456789"
+                placeholderTextColor="#B4B7C0"
+                autoCapitalize="characters"
+                value={manualForm['Serial No']}
+                onChangeText={(text) => updateManualField('Serial No', text)}
+              />
+            </View>
 
-            <Text style={styles.inputLabel}>MAC ID *</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. AA:BB:CC:DD:EE:FF"
-              placeholderTextColor="#999"
-              autoCapitalize="characters"
-              value={manualForm['MAC ID']}
-              onChangeText={(text) => updateManualField('MAC ID', text)}
-            />
+            <View style={styles.fieldGroup}>
+              <Text style={styles.inputLabel}>MAC ID *</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. AA:BB:CC:DD:EE:FF"
+                placeholderTextColor="#B4B7C0"
+                autoCapitalize="characters"
+                value={manualForm['MAC ID']}
+                onChangeText={(text) => updateManualField('MAC ID', text)}
+              />
+            </View>
 
-            <Text style={styles.inputLabel}>Manufacturer (optional)</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. ABC Electronics"
-              placeholderTextColor="#999"
-              value={manualForm['MDF By']}
-              onChangeText={(text) => updateManualField('MDF By', text)}
-            />
+            <View style={[styles.fieldGroup, { marginBottom: 4 }]}>
+              <Text style={styles.inputLabel}>Manufacturer (optional)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. ABC Electronics"
+                placeholderTextColor="#B4B7C0"
+                value={manualForm['MDF By']}
+                onChangeText={(text) => updateManualField('MDF By', text)}
+              />
+            </View>
 
             <TouchableOpacity
               style={styles.registerButton}
+              activeOpacity={0.85}
               onPress={onManualSubmit}>
 
               <Text style={styles.registerButtonText}>
                 Continue
               </Text>
+              <Feather name="arrow-right" size={16} color="#fff" />
 
             </TouchableOpacity>
 
@@ -406,9 +453,12 @@ const ProductRegistrationScreen = ({ navigation }) => {
 
           <View style={styles.card}>
 
-            <Text style={styles.cardTitle}>
-              Product Details
-            </Text>
+            <View style={styles.cardTitleRow}>
+              <Text style={styles.cardTitle}>
+                Product Details
+              </Text>
+              <Feather name="check-circle" size={16} color="#22C55E" />
+            </View>
 
             <Row
               label="Device Name"
@@ -433,10 +483,12 @@ const ProductRegistrationScreen = ({ navigation }) => {
             <Row
               label="Manufacturer"
               value={product['MDF By']}
+              last
             />
 
             {/* Edit / rescan option */}
             <TouchableOpacity
+              style={styles.editLinkRow}
               onPress={() => {
                 if (mode === 'manual') {
                   // go back to the form with existing values
@@ -444,6 +496,12 @@ const ProductRegistrationScreen = ({ navigation }) => {
                 }
                 setProduct(null);
               }}>
+
+              <Feather
+                name={mode === 'scan' ? 'refresh-cw' : 'edit-3'}
+                size={14}
+                color="#4F46E5"
+              />
 
               <Text style={styles.editLink}>
                 {mode === 'scan' ? 'Scan Again' : 'Edit Details'}
@@ -466,9 +524,12 @@ const ProductRegistrationScreen = ({ navigation }) => {
 
             <TouchableOpacity
               style={styles.dateButton}
+              activeOpacity={0.85}
               onPress={() => {
                 setShowDatePicker(true);
               }}>
+
+              <Feather name="calendar" size={16} color="#5B5F6B" />
 
               <Text style={styles.dateText}>
                 {purchaseDate.toLocaleDateString()}
@@ -487,6 +548,85 @@ const ProductRegistrationScreen = ({ navigation }) => {
 
           </View>
         )}
+        {product && (
+          <View style={styles.card}>
+
+            <Text style={styles.cardTitle}>
+              Alert Settings
+            </Text>
+
+            <Text style={styles.inputLabel}>
+              Threshold Value
+            </Text>
+
+
+            <TextInput
+              style={styles.input}
+              placeholder="Enter threshold"
+              keyboardType="numeric"
+              value={thresholdValue}
+              onChangeText={setThresholdValue}
+            />
+
+            <View style={{ marginTop: 20 }}>
+
+              <TouchableOpacity
+                style={styles.checkboxRow}
+                onPress={() => setEmailEnabled(!emailEnabled)}>
+
+                <Text style={styles.checkbox}>
+                  {emailEnabled ? "☑" : "☐"}
+                </Text>
+
+                <Text>Email Alert</Text>
+
+              </TouchableOpacity>
+
+              {emailEnabled && (
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter Email"
+                  keyboardType="email-address"
+                  value={alertEmail}
+                  onChangeText={setAlertEmail}
+                />
+              )}
+
+
+            </View>
+
+            <View style={{ marginTop: 20 }}>
+
+              <TouchableOpacity
+                style={styles.checkboxRow}
+                onPress={() => setSmsEnabled(!smsEnabled)}>
+
+                <Text style={styles.checkbox}>
+                  {smsEnabled ? "☑" : "☐"}
+                </Text>
+
+                <Text>SMS Alert</Text>
+
+              </TouchableOpacity>
+
+              {smsEnabled && (
+
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter Phone Number"
+                  keyboardType="phone-pad"
+                  value={smsPhone}
+                  onChangeText={setSmsPhone}
+                />
+
+              )}
+
+
+            </View>
+
+
+          </View>
+        )}
 
 
         {/* Register */}
@@ -495,11 +635,13 @@ const ProductRegistrationScreen = ({ navigation }) => {
 
           <TouchableOpacity
             style={styles.registerButton}
+            activeOpacity={0.85}
             onPress={onRegister}>
 
             <Text style={styles.registerButtonText}>
               Register Product
             </Text>
+            <Feather name="arrow-right" size={16} color="#fff" />
 
           </TouchableOpacity>
 
@@ -510,15 +652,15 @@ const ProductRegistrationScreen = ({ navigation }) => {
   );
 };
 
-const Row = ({ label, value }) => {
+const Row = ({ label, value, last }) => {
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, last && { marginBottom: 0 }]}>
 
       <Text style={styles.label}>
         {label}
       </Text>
 
-      <Text style={styles.value}>
+      <Text style={styles.value} numberOfLines={1}>
         {value || '-'}
       </Text>
 
@@ -527,3 +669,270 @@ const Row = ({ label, value }) => {
 };
 
 export default ProductRegistrationScreen;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FAFAFB',
+  },
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 48,
+  },
+
+  screenTitle: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#0B0D12',
+    letterSpacing: -0.4,
+  },
+  screenSubtitle: {
+    fontSize: 14,
+    color: '#8A8F98',
+    marginTop: 6,
+    marginBottom: 28,
+  },
+
+  // Mode toggle
+  modeToggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F0F1F4',
+    borderRadius: 14,
+    padding: 4,
+    marginBottom: 28,
+  },
+  modeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 11,
+    borderRadius: 11,
+  },
+  modeButtonActive: {
+    backgroundColor: '#fff',
+    shadowColor: '#0B0D12',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  modeIcon: {
+    marginRight: 6,
+  },
+  modeButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#9CA3AF',
+  },
+  modeButtonTextActive: {
+    color: '#0B0D12',
+  },
+
+  // Scanner
+  scannerContainer: {
+    alignItems: 'center',
+    marginBottom: 28,
+  },
+  cameraBox: {
+    width: '100%',
+    height: 300,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: '#0B0D12',
+    borderWidth: 1,
+    borderColor: '#F0F1F4',
+  },
+  camera: {
+    width: '100%',
+    height: '100%',
+  },
+  scanLine: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    top: 28,
+    height: 2,
+    backgroundColor: '#4F46E5',
+    borderRadius: 2,
+  },
+  corner: {
+    position: 'absolute',
+    width: 28,
+    height: 28,
+    borderColor: '#fff',
+  },
+  topLeft: {
+    top: 20,
+    left: 20,
+    borderTopWidth: 2.5,
+    borderLeftWidth: 2.5,
+    borderTopLeftRadius: 8,
+  },
+  topRight: {
+    top: 20,
+    right: 20,
+    borderTopWidth: 2.5,
+    borderRightWidth: 2.5,
+    borderTopRightRadius: 8,
+  },
+  bottomLeft: {
+    bottom: 20,
+    left: 20,
+    borderBottomWidth: 2.5,
+    borderLeftWidth: 2.5,
+    borderBottomLeftRadius: 8,
+  },
+  bottomRight: {
+    bottom: 20,
+    right: 20,
+    borderBottomWidth: 2.5,
+    borderRightWidth: 2.5,
+    borderBottomRightRadius: 8,
+  },
+  scanText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#8A8F98',
+    marginTop: 16,
+  },
+
+  // Cards
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#F0F1F4',
+    shadowColor: '#0B0D12',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 1,
+  },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 18,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#0B0D12',
+    marginBottom: 18,
+  },
+
+  // Manual form
+  fieldGroup: {
+    marginBottom: 14,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#5B5F6B',
+    marginBottom: 8,
+    letterSpacing: 0.2,
+  },
+  input: {
+    borderWidth: 1.5,
+    borderColor: '#EEEFF2',
+    backgroundColor: '#FAFAFB',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#0B0D12',
+  },
+
+  // Product details rows
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#EEEFF2',
+    marginBottom: 2,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#8A8F98',
+  },
+  value: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0B0D12',
+    maxWidth: '60%',
+    textAlign: 'right',
+  },
+
+  editLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginTop: 16,
+    gap: 6,
+  },
+  editLink: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#4F46E5',
+  },
+
+  // Date
+  dateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1.5,
+    borderColor: '#EEEFF2',
+    backgroundColor: '#FAFAFB',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  dateText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0B0D12',
+  },
+
+  // Buttons
+  registerButton: {
+    backgroundColor: '#0B0D12',
+    paddingVertical: 16,
+    borderRadius: 14,
+    marginTop: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#0B0D12',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    elevation: 3,
+  },
+  registerButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+
+  checkbox: {
+    fontSize: 22,
+    marginRight: 10,
+  },
+});
+

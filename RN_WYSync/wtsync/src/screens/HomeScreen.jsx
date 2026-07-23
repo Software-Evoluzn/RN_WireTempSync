@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
+import Feather from 'react-native-vector-icons/Feather';
 
 import { getUserDetails } from '../services/AuthService';
 
@@ -23,6 +24,14 @@ const HomeScreen = ({ navigation }) => {
   const intervalRef = useRef(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
+  // --- Header animation values (header only) ---
+  const headerFade = useRef(new Animated.Value(0)).current;
+  const headerSlide = useRef(new Animated.Value(10)).current;
+  const accentLineWidth = useRef(new Animated.Value(0)).current;
+  const accentOpacity = useRef(new Animated.Value(0.4)).current;
+  const brandScale = useRef(new Animated.Value(0.98)).current;
+  const greetingFade = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     Animated.loop(
       Animated.sequence([
@@ -35,6 +44,55 @@ const HomeScreen = ({ navigation }) => {
           toValue: 1,
           duration: 700,
           useNativeDriver: true
+        }),
+      ])
+    ).start();
+  }, []);
+
+  // --- Header entrance animation (runs once on mount) ---
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(headerFade, {
+        toValue: 1,
+        duration: 550,
+        useNativeDriver: true,
+      }),
+      Animated.timing(headerSlide, {
+        toValue: 0,
+        duration: 550,
+        useNativeDriver: true,
+      }),
+      Animated.timing(greetingFade, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(brandScale, {
+        toValue: 1,
+        duration: 500,
+        delay: 90,
+        useNativeDriver: true,
+      }),
+      Animated.timing(accentLineWidth, {
+        toValue: 80,
+        duration: 700,
+        delay: 200,
+        useNativeDriver: false, // width cannot use native driver
+      }),
+    ]).start();
+
+    // Very soft, slow, infinite opacity pulse on the underline only
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(accentOpacity, {
+          toValue: 1,
+          duration: 2400,
+          useNativeDriver: true,
+        }),
+        Animated.timing(accentOpacity, {
+          toValue: 0.4,
+          duration: 2400,
+          useNativeDriver: true,
         }),
       ])
     ).start();
@@ -90,56 +148,43 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F5F7FB" />
+      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFB" />
 
       <View style={styles.container}>
         {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>
-              {loading ? 'Welcome 👋' : `Hello, ${firstName} 👋`}
-            </Text>
-            <Text style={styles.brand}>WireTempSync</Text>
-          </View>
+        <Animated.View
+          style={[
+            styles.header,
+            {
+              opacity: headerFade,
+              transform: [{ translateY: headerSlide }],
+            },
+          ]}
+        >
+          <Animated.Text style={[styles.greeting, { opacity: greetingFade }]}>
+            {loading ? 'WELCOME' : `HELLO, ${firstName.toUpperCase()}`}
+          </Animated.Text>
 
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{loading ? '' : initial}</Text>
-          </View>
-        </View>
+          <Animated.Text
+            style={[styles.brand, { transform: [{ scale: brandScale }] }]}
+          >
+            WireTempSync
+          </Animated.Text>
 
-        {/* Empty state card
-        <View style={styles.card}>
-          <View style={styles.iconWrap}>
-            <Text style={styles.icon}>📦</Text>
-          </View>
-
-          <Text style={styles.title}>No Product Registered</Text>
-
-          <Text style={styles.subtitle}>
-            Register your first device to activate its warranty and start
-            syncing temperature data.
-          </Text>
-
-          <View style={styles.statusPill}>
-            <View style={styles.statusDot} />
-            <Text style={styles.statusText}>Warranty inactive</Text>
-          </View>
-
-          <TouchableOpacity
-            style={styles.button}
-            activeOpacity={0.85}
-            onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.buttonText}>+  Register Product</Text>
-          </TouchableOpacity>
-        </View> */}
-
+          <Animated.View
+            style={[
+              styles.accentLine,
+              { width: accentLineWidth, opacity: accentOpacity },
+            ]}
+          />
+        </Animated.View>
 
         {products.length === 0 ? (
           <>
 
             <View style={styles.card}>
               <View style={styles.iconWrap}>
-                <Text style={styles.icon}>📦</Text>
+                <Feather name="package" size={30} color="#4F46E5" />
               </View>
 
               <Text style={styles.title}>No Product Registered</Text>
@@ -150,7 +195,7 @@ const HomeScreen = ({ navigation }) => {
               </Text>
 
               <View style={styles.statusPill}>
-                <View style={styles.statusDot} />
+                <View style={[styles.statusDot, { backgroundColor: '#EF4444' }]} />
                 <Text style={styles.statusText}>Warranty inactive</Text>
               </View>
 
@@ -158,7 +203,8 @@ const HomeScreen = ({ navigation }) => {
                 style={styles.button}
                 activeOpacity={0.85}
                 onPress={() => navigation.navigate('Register')}>
-                <Text style={styles.buttonText}>+  Register Product</Text>
+                <Feather name="plus" size={16} color="#fff" />
+                <Text style={styles.buttonText}>Register Product</Text>
               </TouchableOpacity>
             </View>
 
@@ -167,9 +213,12 @@ const HomeScreen = ({ navigation }) => {
           </>
         ) : (
           <>
-            <Text style={styles.sectionTitle}>
-              My Products ({products.length})
-            </Text>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>My Products</Text>
+              <View style={styles.countBadge}>
+                <Text style={styles.countBadgeText}>{products.length}</Text>
+              </View>
+            </View>
 
             <FlatList
 
@@ -194,7 +243,7 @@ const HomeScreen = ({ navigation }) => {
                 >
 
                   <View style={styles.productHeader}>
-                    <Text style={styles.productName}>
+                    <Text style={styles.productName} numberOfLines={1}>
                       {item.device_name}
                     </Text>
 
@@ -206,8 +255,8 @@ const HomeScreen = ({ navigation }) => {
                         styles.statusBadge,
                         {
                           backgroundColor: item.online
-                            ? "#DCFCE7"
-                            : "#FEE2E2"
+                            ? "#EDFBF3"
+                            : "#FDF0F0"
                         }
                       ]}>
 
@@ -237,7 +286,7 @@ const HomeScreen = ({ navigation }) => {
                         ]}
                       >
 
-                        {item.online ? "Online" : "Offline"}
+                        {item.online ? "ONLINE" : "OFFLINE"}
 
                       </Text>
 
@@ -251,13 +300,18 @@ const HomeScreen = ({ navigation }) => {
                     {item.model_no}
                   </Text>
 
-                  <Text style={styles.serial}>
-                    Serial No : {item.serial_no}
-                  </Text>
+                  <View style={styles.divider} />
 
-                  <Text style={styles.expiry}>
-                    Warranty Till : {item.warranty_expiry}
-                  </Text>
+                  <View style={styles.metaRow}>
+                    <View>
+                      <Text style={styles.metaLabel}>Serial Number</Text>
+                      <Text style={styles.metaValue}>{item.serial_no}</Text>
+                    </View>
+                    <View style={styles.metaRight}>
+                      <Text style={styles.metaLabel}>Warranty</Text>
+                      <Text style={styles.metaValue}>{item.warranty_expiry}</Text>
+                    </View>
+                  </View>
 
 
                 </TouchableOpacity>
@@ -268,9 +322,9 @@ const HomeScreen = ({ navigation }) => {
             <TouchableOpacity
               style={styles.button}
               onPress={() => navigation.navigate("Register")}>
-
+              <Feather name="plus" size={16} color="#fff" />
               <Text style={styles.buttonText}>
-                + Register Another Product
+                Register Another Product
               </Text>
 
             </TouchableOpacity>
@@ -295,174 +349,172 @@ export default HomeScreen;
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#F5F7FB',
+    backgroundColor: '#FAFAFB',
   },
   container: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingTop: 8,
     justifyContent: 'center',
   },
 
   header: {
+    paddingTop: 12,
+    marginBottom: 36,
+  },
+
+  greeting: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9CA3AF',
+    letterSpacing: 0.8,
+    marginBottom: 8,
+  },
+  brand: {
+    fontSize: 29,
+    fontWeight: '700',
+    color: '#0B0D12',
+    letterSpacing: -0.4,
+  },
+  accentLine: {
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: '#4F46E5',
+    marginTop: 14,
+  },
+
+  sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 32,
-  },
-
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 18,
-  },
-
-  productCard: {
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 18,
     marginBottom: 16,
-    elevation: 5,
-
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: {
-      width: 0,
-      height: 3,
-    },
+    paddingHorizontal: 2,
   },
-  greeting: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#6B7280',
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#0B0D12',
+    letterSpacing: -0.2,
   },
-  brand: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#111827',
-    marginTop: 2,
-    letterSpacing: -0.5,
+  countBadge: {
+    backgroundColor: '#F0F1F4',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20,
   },
-  avatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: '#4F46E5',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    color: '#fff',
-    fontSize: 18,
+  countBadgeText: {
+    fontSize: 12,
     fontWeight: '700',
+    color: '#5B5F6B',
   },
 
+  // Empty state card
   card: {
     backgroundColor: '#fff',
     paddingVertical: 36,
-    paddingHorizontal: 26,
+    paddingHorizontal: 24,
     borderRadius: 24,
     alignItems: 'center',
-    // Android
-    elevation: 6,
-    // iOS
-    shadowColor: '#4F46E5',
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
+    borderWidth: 1,
+    borderColor: '#F0F1F4',
+    shadowColor: '#0B0D12',
+    shadowOpacity: 0.05,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
   },
-
-  productHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  productName: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    flex: 1,
-  },
-
-
-  model: {
-    marginTop: 8,
-    color: '#6B7280',
-    fontSize: 14,
-  },
-
-  serial: {
-    marginTop: 10,
-    fontSize: 14,
-    color: '#374151',
-  },
-
-  expiry: {
-    marginTop: 10,
-    fontSize: 13,
-    color: '#4B5563',
-  },
-
-  activeBadge: {
-    backgroundColor: '#E8F8EF',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-  },
-
-  activeText: {
-    color: '#16A34A',
-    fontWeight: '700',
-    fontSize: 12,
-  },
-
   iconWrap: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    backgroundColor: '#EEF0FF',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#F4F4FE',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
-  },
-  icon: {
-    fontSize: 48,
+    marginBottom: 22,
   },
   title: {
-    fontSize: 21,
+    fontSize: 19,
     fontWeight: '700',
-    color: '#111827',
+    color: '#0B0D12',
   },
   subtitle: {
-    fontSize: 14.5,
+    fontSize: 14,
     lineHeight: 21,
     textAlign: 'center',
     marginTop: 10,
-    color: '#6B7280',
+    color: '#8A8F98',
+    maxWidth: 260,
   },
-
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF3F2',
+    backgroundColor: '#FDF0F0',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
     marginTop: 20,
   },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
   statusText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#B42318',
+    color: '#B91C1C',
+  },
+
+  // Product cards
+  productCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#F0F1F4',
+    shadowColor: '#0B0D12',
+    shadowOpacity: 0.04,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 1,
+  },
+  productHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  productName: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#0B0D12',
+    flex: 1,
+    marginRight: 10,
+  },
+  model: {
+    marginTop: 6,
+    color: '#8A8F98',
+    fontSize: 13,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#EEEFF2',
+    marginVertical: 14,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  metaRight: {
+    alignItems: 'flex-end',
+  },
+  metaLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#9CA3AF',
+    letterSpacing: 0.3,
+    marginBottom: 3,
+    textTransform: 'uppercase',
+  },
+  metaValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2A2D34',
   },
 
   statusBadge: {
@@ -472,45 +524,46 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 20,
   },
-
   statusBadgeText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
+    letterSpacing: 0.3,
   },
-
   statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     marginRight: 6,
   },
 
   button: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#0B0D12',
     paddingHorizontal: 32,
-    paddingVertical: 15,
-    borderRadius: 14,
-    marginTop: 26,
+    paddingVertical: 16,
+    borderRadius: 16,
+    marginTop: 8,
     width: '100%',
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#4F46E5',
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 4,
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#0B0D12',
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
   },
   buttonText: {
     color: '#fff',
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: 15,
   },
 
   footerHint: {
     textAlign: 'center',
-    color: '#9CA3AF',
-    fontSize: 13,
-    marginTop: 24,
+    color: '#C7C9D1',
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 20,
   },
 });
-
-

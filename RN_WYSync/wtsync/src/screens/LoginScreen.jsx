@@ -12,6 +12,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import Feather from 'react-native-vector-icons/Feather';
 
 import { loginUser } from '../services/AuthService';
 import { googleLogin } from '../services/AuthService';
@@ -71,43 +72,51 @@ const LoginScreen = ({ navigation }) => {
         </View>
 
         <Text style={styles.title}>Welcome back</Text>
-        <Text style={styles.subtitle}>Sign in to continue</Text>
+        <Text style={styles.subtitle}>Sign in to continue to WireTempSync</Text>
 
         <View style={styles.form}>
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            placeholder="you@example.com"
-            placeholderTextColor="#94A3B8"
-            style={[styles.input, focused === 'email' && styles.inputFocused]}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            onFocus={() => setFocused('email')}
-            onBlur={() => setFocused(null)}
-          />
-
-          <Text style={styles.label}>Password</Text>
-          <View
-            style={[
-              styles.passwordWrapper,
-              focused === 'password' && styles.inputFocused,
-            ]}>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Email</Text>
             <TextInput
-              placeholder="••••••••"
-              placeholderTextColor="#94A3B8"
-              style={styles.passwordInput}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              onFocus={() => setFocused('password')}
+              placeholder="you@example.com"
+              placeholderTextColor="#B4B7C0"
+              style={[styles.input, focused === 'email' && styles.inputFocused]}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              onFocus={() => setFocused('email')}
               onBlur={() => setFocused(null)}
             />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              <Text style={styles.showText}>
-                {showPassword ? 'Hide' : 'Show'}
-              </Text>
-            </TouchableOpacity>
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Password</Text>
+            <View
+              style={[
+                styles.passwordWrapper,
+                focused === 'password' && styles.inputFocused,
+              ]}>
+              <TextInput
+                placeholder="••••••••"
+                placeholderTextColor="#B4B7C0"
+                style={styles.passwordInput}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                onFocus={() => setFocused('password')}
+                onBlur={() => setFocused(null)}
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Feather
+                  name={showPassword ? 'eye-off' : 'eye'}
+                  size={18}
+                  color="#8A8F98"
+                />
+              </TouchableOpacity>
+            </View>
           </View>
 
           <TouchableOpacity
@@ -130,7 +139,7 @@ const LoginScreen = ({ navigation }) => {
 
           <View style={styles.dividerRow}>
             <View style={styles.divider} />
-            <Text style={styles.dividerText}>or</Text>
+            <Text style={styles.dividerText}>OR</Text>
             <View style={styles.divider} />
           </View>
 
@@ -140,9 +149,15 @@ const LoginScreen = ({ navigation }) => {
             activeOpacity={0.85}
             disabled={googleLoading}>
             {googleLoading ? (
-              <ActivityIndicator color="#EA4335" />
+              <ActivityIndicator color="#5B5F6B" />
             ) : (
-              <Text style={styles.googleText}>Continue with Google</Text>
+              <>
+                <Image
+                  source={require('../assests/images/google.png')}
+                  style={styles.googleIconFallback}
+                />
+                <Text style={styles.googleText}>Continue with Google</Text>
+              </>
             )}
           </TouchableOpacity>
         </View>
@@ -163,7 +178,7 @@ const LoginScreen = ({ navigation }) => {
 export default LoginScreen;
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#F8FAFC' },
+  flex: { flex: 1, backgroundColor: '#FAFAFB' },
   container: {
     flexGrow: 1,
     justifyContent: 'center',
@@ -171,116 +186,138 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
   },
   logoCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 22,
-    backgroundColor: '#f3f3f7',
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: '#fff',
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
-    marginBottom: 20,
-    shadowColor: '#490735',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 8,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#F0F1F4',
+    shadowColor: '#0B0D12',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.05,
+    shadowRadius: 16,
+    elevation: 2,
   },
-  logoText: { fontSize: 34, fontWeight: '800', color: '#fff' },
+  logo: {
+    width: 34,
+    height: 34,
+  },
   title: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#0B0D12',
     textAlign: 'center',
+    letterSpacing: -0.4,
   },
   subtitle: {
-    fontSize: 15,
-    color: '#64748B',
+    fontSize: 14,
+    color: '#8A8F98',
     textAlign: 'center',
     marginTop: 6,
-    marginBottom: 28,
+    marginBottom: 32,
   },
   form: {
     backgroundColor: '#fff',
-    borderRadius: 20,
+    borderRadius: 22,
     padding: 20,
-    shadowColor: '#0F172A',
+    borderWidth: 1,
+    borderColor: '#F0F1F4',
+    shadowColor: '#0B0D12',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.06,
-    shadowRadius: 24,
-    elevation: 4,
+    shadowOpacity: 0.04,
+    shadowRadius: 20,
+    elevation: 2,
+  },
+  fieldGroup: {
+    marginBottom: 14,
   },
   label: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#334155',
-    marginBottom: 6,
-    marginTop: 6,
+    color: '#5B5F6B',
+    marginBottom: 8,
+    letterSpacing: 0.2,
   },
   input: {
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
+    borderColor: '#EEEFF2',
+    backgroundColor: '#FAFAFB',
     borderRadius: 12,
     paddingHorizontal: 14,
-    paddingVertical: 13,
+    paddingVertical: 14,
     fontSize: 15,
-    color: '#0F172A',
-    marginBottom: 6,
+    fontWeight: '500',
+    color: '#0B0D12',
   },
   inputFocused: {
-    borderColor: '#6366F1',
+    borderColor: '#4F46E5',
     backgroundColor: '#fff',
   },
   passwordWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
+    borderColor: '#EEEFF2',
+    backgroundColor: '#FAFAFB',
     borderRadius: 12,
     paddingHorizontal: 14,
-    marginBottom: 6,
   },
   passwordInput: {
     flex: 1,
-    paddingVertical: 13,
+    paddingVertical: 14,
     fontSize: 15,
-    color: '#0F172A',
+    fontWeight: '500',
+    color: '#0B0D12',
   },
-  showText: { color: '#6366F1', fontWeight: '600', fontSize: 13 },
-  forgotWrapper: { alignSelf: 'flex-end', marginTop: 4, marginBottom: 18 },
-  forgotText: { color: '#6366F1', fontWeight: '600', fontSize: 13 },
+  forgotWrapper: { alignSelf: 'flex-end', marginTop: 2, marginBottom: 20 },
+  forgotText: { color: '#4F46E5', fontWeight: '600', fontSize: 13 },
   button: {
-    backgroundColor: '#6366F1',
+    backgroundColor: '#0B0D12',
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: 'center',
-    shadowColor: '#6366F1',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowColor: '#0B0D12',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    elevation: 3,
   },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  buttonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   dividerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: 22,
   },
-  divider: { flex: 1, height: 1, backgroundColor: '#E2E8F0' },
-  dividerText: { marginHorizontal: 12, color: '#94A3B8', fontSize: 13 },
+  divider: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: '#EEEFF2' },
+  dividerText: {
+    marginHorizontal: 12,
+    color: '#B4B7C0',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
   googleButton: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#fff',
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: '#EEEFF2',
     paddingVertical: 15,
     borderRadius: 14,
+    gap: 10,
   },
-  googleText: { color: '#334155', fontSize: 15, fontWeight: '600' },
-  footer: { marginTop: 24, alignItems: 'center' },
-  footerText: { color: '#64748B', fontSize: 14 },
-  footerLink: { color: '#6366F1', fontWeight: '700' },
+  googleIconFallback: {
+    width: 18,
+    height: 18,
+  },
+  googleText: { color: '#2A2D34', fontSize: 14, fontWeight: '600' },
+  footer: { marginTop: 28, alignItems: 'center' },
+  footerText: { color: '#8A8F98', fontSize: 14 },
+  footerLink: { color: '#4F46E5', fontWeight: '700' },
 });

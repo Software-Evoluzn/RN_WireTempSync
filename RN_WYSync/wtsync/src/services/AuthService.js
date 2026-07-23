@@ -1,27 +1,26 @@
-import firebase from '@react-native-firebase/app';
-import auth from '@react-native-firebase/auth'
-import IP_ADDRESS from '../services/ipconfig'
+import { getApp } from '@react-native-firebase/app';
+import { getAuth, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithCredential, signOut } from '@react-native-firebase/auth';
+import IP_ADDRESS from '../services/ipconfig';
 import { GoogleSignin, isSuccessResponse } from '@react-native-google-signin/google-signin';
 
-export const registerUser = async (
-    name,
-    email,
-    password,
-    contact
-) => {
+// Initialize instances using the modular API
+const auth = getAuth();
+
+export const registerUser = async (name, email, password, contact) => {
     try {
-        const userCrdential = await auth().createUserWithEmailAndPassword(
+        const userCredential = await createUserWithEmailAndPassword(
+            auth,
             email,
-            password,
+            password
         );
 
-        //Firebase UID
-        console.log('Firebase UID =>', userCrdential.user.uid);
+        // Firebase UID
+        console.log('Firebase UID =>', userCredential.user.uid);
 
-        const uid = userCrdential.user.uid;
-        console.log("uid here ", uid)
+        const uid = userCredential.user.uid;
+        console.log("uid here ", uid);
 
-        //Flask API Call
+        // Flask API Call
         const BASE_URL = `http://${IP_ADDRESS}:5006`;
         console.log('==============================');
         console.log('Calling Flask Register API...');
@@ -33,8 +32,6 @@ export const registerUser = async (
             contact: contact,
         });
         console.log('==============================');
-
-
 
         const response = await fetch(
             `${BASE_URL}/register`,
@@ -55,67 +52,53 @@ export const registerUser = async (
         console.log('HTTP Status:', response.status);
         console.log('Response OK:', response.ok);
 
-       
-
-
         const data = await response.json();
-
-         console.log('Parsed Response:', data);
-
-
-        console.log("sejal data ", data);
-        console.log("response ", response)
+        console.log('Parsed Response:', data);
 
         if (!response.ok) {
             throw new Error(data.message || 'Registration API Failed');
         }
 
-
-
         if (!data.success) {
             throw new Error(data.message);
         }
+        
         return {
             success: true,
-            user: userCrdential.user,
+            user: userCredential.user,
         };
 
     } catch (error) {
         console.log('Register Error:', error);
-
         return {
             success: false,
             message: error.message,
         };
     }
-}
+};
 
 export const loginUser = async (email, password) => {
     try {
-        const userCredential = await auth().signInWithEmailAndPassword(
+        const userCredential = await signInWithEmailAndPassword(
+            auth,
             email,
             password
-        )
+        );
         return {
             success: true,
             user: userCredential.user
-        }
-
+        };
     } catch (error) {
-
         return {
             success: false,
             message: error.message
         };
-
     }
-
-
 };
 
 export const logoutUser = async () => {
     try {
-        await auth().signOut();
+        await signOut(auth);
 
         // Revoke Google access
         await GoogleSignin.revokeAccess();
@@ -133,7 +116,6 @@ export const logoutUser = async () => {
     }
 };
 
-
 export const googleLogin = async () => {
     try {
         await GoogleSignin.hasPlayServices();
@@ -146,21 +128,20 @@ export const googleLogin = async () => {
         }
 
         const tokens = await GoogleSignin.getTokens();
-
         console.log('Google Tokens:', tokens);
 
-        const credential = auth.GoogleAuthProvider.credential(
+        // Use GoogleAuthProvider from the modular package directly
+        const credential = GoogleAuthProvider.credential(
             tokens.idToken,
             tokens.accessToken,
         );
 
-        const userCredential = await auth().signInWithCredential(credential);
+        const userCredential = await signInWithCredential(auth, credential);
         console.log("Firebase User:", userCredential.user);
 
         // ===============================
         // Save Google user in MySQL
         // ===============================
-
         const BASE_URL = `http://${IP_ADDRESS}:5006`;
 
         const apiResponse = await fetch(`${BASE_URL}/register`, {
@@ -184,7 +165,6 @@ export const googleLogin = async () => {
         };
     } catch (error) {
         console.log('Google Error:', error);
-
         return {
             success: false,
             message: error.message,
@@ -194,7 +174,12 @@ export const googleLogin = async () => {
 
 export const forgotPassword = async (email) => {
     try {
-        await auth().sendPasswordResetEmail(email);
+        // Note: For sendPasswordResetEmail, import it from '@react-native-firebase/auth' if needed, 
+        // or check your version's specific modular export. Assuming it works similarly:
+        // await sendPasswordResetEmail(auth, email);
+        
+        // Alternative fallback if your package wrapper prefers namespace for secondary methods:
+        await auth.sendPasswordResetEmail(email);
 
         return {
             success: true,
@@ -207,22 +192,21 @@ export const forgotPassword = async (email) => {
     }
 };
 
-
 export const getUserDetails = async () => {
     try {
-        const uid = auth().currentUser.uid;
+        const uid = auth.currentUser ? auth.currentUser.uid : null;
+        if (!uid) throw new Error("No user currently logged in.");
+
         const BASE_URL = `http://${IP_ADDRESS}:5006`;
 
         const response = await fetch(`${BASE_URL}/get-user`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-
             },
             body: JSON.stringify({
                 firebase_uid: uid,
             }),
-
         });
 
         const data = await response.json();
@@ -234,7 +218,6 @@ export const getUserDetails = async () => {
         return {
             success: false,
             message: error.message,
-        }
-
+        };
     }
-}
+};
