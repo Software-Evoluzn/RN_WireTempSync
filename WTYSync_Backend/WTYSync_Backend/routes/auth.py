@@ -81,3 +81,46 @@ def get_user():
             "contact": user.contact
         }
     })
+    
+
+@auth.route("/update-profile", methods=["PUT"])
+def update_profile():
+
+    try:
+
+        data = request.get_json()
+
+        firebase_uid = data.get("firebase_uid")
+
+        user_data = User.query.filter_by(firebase_uid=firebase_uid).first()
+
+        if not user_data:
+            return jsonify({
+                "success": False,
+                "message": "User not found"
+            }), 404
+
+        user_data.name = data.get("name", user_data.name)
+        user_data.email = data.get("email", user_data.email)
+        user_data.contact = data.get("contact", user_data.contact)
+
+        db.session.commit()
+
+        return jsonify({
+            "success": True,
+            "message": "Profile Updated Successfully",
+            "user": {
+                "name": user_data.name,
+                "email": user_data.email,
+                "contact": user_data.contact
+            }
+        })
+
+    except Exception as e:
+
+        db.session.rollback()
+
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500

@@ -3,6 +3,10 @@ import { getAuth, GoogleAuthProvider, signInWithEmailAndPassword, createUserWith
 import IP_ADDRESS from '../services/ipconfig';
 import { GoogleSignin, isSuccessResponse } from '@react-native-google-signin/google-signin';
 
+import axios from "axios";
+
+
+
 // Initialize instances using the modular API
 const auth = getAuth();
 
@@ -220,4 +224,25 @@ export const getUserDetails = async () => {
             message: error.message,
         };
     }
+};
+
+
+export const updateProfile = async (body) => {
+  try {
+
+    const response = await axios.put(
+      `http://${IP_ADDRESS}:5006/update-profile`,
+      body
+    );
+
+    return response.data;
+
+  } catch (error) {
+
+    return {
+      success:false,
+      message:error.response?.data?.message || error.message
+    };
+
+  }
 };
