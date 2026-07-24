@@ -11,13 +11,15 @@
  * - X axis is FIXED for the whole day: 00:00 -> 23:59 (1440 minutes).
  * - Default view = TODAY, with live socket data streaming in and
  *   plotted at its real time-of-day position on that fixed axis.
- * - A date navigator (◀ / date label / ▶ / "Today") lets the user
- *   jump to any previous day. Selecting a day fetches that day's
- *   readings from the backend (`/api/telemetry-history`).
+ * - Zoom is PINCH-ONLY (2-finger gesture) — no +/- buttons.
+ *   Double-tap the chart to reset back to the full-day view.
+ * - 1-finger drag pans left/right once zoomed in.
+ * - Date is chosen via a calendar dropdown (tap the date field to open
+ *   a month-grid picker). Selecting a day fetches that day's readings
+ *   from the backend (`/api/telemetry-history`).
  * - When viewing TODAY, the fetched history (earlier in the day) is
  *   merged with whatever live points have already streamed in via
  *   socket, so nothing is duplicated or lost.
- * - Pinch (2-finger) zooms in/out on the time axis, 1-finger drag pans.
  * - The existing Panel dropdown ("All Panels" / "Panel 1" / ...) acts as
  *   the control-panel filter for which phase lines are drawn.
  * -----------------------------------------------------------------------
@@ -77,6 +79,7 @@ const COLORS = {
   now: '#F43F5E',
   grid: '#EDF0F7',
   live: '#10B981',
+  disabledDay: '#C7CCDA',
 };
 
 // Small breathing-room offset so the graph section's top border/divider
@@ -156,19 +159,23 @@ const dateKeyOf = (d = new Date()) => {
   return `${y}-${m}-${day}`;
 };
 
-const addDays = (date, delta) => {
-  const d = new Date(date);
-  d.setDate(d.getDate() + delta);
-  return d;
-};
+const isSameDay = (a, b) =>
+  a.getFullYear() === b.getFullYear() &&
+  a.getMonth() === b.getMonth() &&
+  a.getDate() === b.getDate();
 
 const MONTH_LABELS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+const MONTH_LABELS_SHORT = [
   'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ];
+const WEEKDAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
 const formatDateLabel = (d) =>
-  `${String(d.getDate()).padStart(2, '0')} ${MONTH_LABELS[d.getMonth()]} ${d.getFullYear()}`;
+  `${String(d.getDate()).padStart(2, '0')} ${MONTH_LABELS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
 
 const minutesSinceMidnight = (d = new Date()) =>
   d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
@@ -287,6 +294,18 @@ const PanelCard = memo(({ panel, onEditPress }) => {
     onEditPress && onEditPress(panel.panel_no);
   }, [onEditPress, panel.panel_no]);
 
+  // Only show phase blocks (R/Y/B/N) that actually have a current
+  // reading. Phases with no live value (null/undefined) are hidden
+  // instead of showing an empty "--" card.
+  const visibleTemperatures = useMemo(
+    () => panel.temperatures.filter((temp) => temp.current != null),
+    [panel.temperatures]
+  );
+
+  if (visibleTemperatures.length === 0) {
+    return null;
+  }
+
   return (
     <View style={styles.panelCard}>
       <View style={styles.panelHeaderRow}>
@@ -302,7 +321,7 @@ const PanelCard = memo(({ panel, onEditPress }) => {
       </View>
 
       <View style={styles.tempGrid}>
-        {panel.temperatures.map((temp) => (
+        {visibleTemperatures.map((temp) => (
           <TemperatureCard key={temp.phase} temperature={temp} />
         ))}
       </View>
@@ -381,50 +400,189 @@ const PanelSelector = memo(({ options, selected, onSelect }) => {
 });
 
 // -------------------------------------------------------------------------
-// DateNavigator — ◀  [ 20 Jul 2026 ]  ▶   (Today) / LIVE badge
+// CalendarModal — month-grid date picker (the "calendar dropdown")
 // -------------------------------------------------------------------------
-const DateNavigator = memo(({ selectedDate, isToday, onPrev, onNext, onToday }) => {
+const CalendarModal = memo(({ visible, selectedDate, onSelect, onClose }) => {
+  const [viewMonth, setViewMonth] = useState(
+    () => new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
+  );
+
+  useEffect(() => {
+    if (visible) {
+      setViewMonth(new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1));
+    }
+  }, [visible, selectedDate]);
+
+  const today = new Date();
+  const isViewingCurrentMonth =
+    viewMonth.getFullYear() === today.getFullYear() &&
+    viewMonth.getMonth() === today.getMonth();
+
+  const goPrevMonth = useCallback(() => {
+    setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+  }, []);
+
+  const goNextMonth = useCallback(() => {
+    if (isViewingCurrentMonth) return;
+    setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1));
+  }, [isViewingCurrentMonth]);
+
+  const cells = useMemo(() => {
+    const year = viewMonth.getFullYear();
+    const month = viewMonth.getMonth();
+    const firstWeekday = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+
+    const list = [];
+    for (let i = 0; i < firstWeekday; i += 1) {
+      list.push(null);
+    }
+    for (let day = 1; day <= totalDays; day += 1) {
+      list.push(new Date(year, month, day));
+    }
+    return list;
+  }, [viewMonth]);
+
+  const handleJumpToday = useCallback(() => {
+    onSelect(new Date());
+  }, [onSelect]);
+
   return (
-    <View style={styles.dateNavRow}>
-      <TouchableOpacity
-        style={styles.dateNavBtn}
-        onPress={onPrev}
-        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-      >
-        <Icon name="chevron-left" size={18} color={COLORS.headerText} />
+    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+        <TouchableOpacity activeOpacity={1} style={styles.calendarCard}>
+          <View style={styles.calendarHeaderRow}>
+            <TouchableOpacity
+              style={styles.calendarNavBtn}
+              onPress={goPrevMonth}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <Icon name="chevron-left" size={20} color={COLORS.headerText} />
+            </TouchableOpacity>
+
+            <Text style={styles.calendarMonthText}>
+              {MONTH_LABELS[viewMonth.getMonth()]} {viewMonth.getFullYear()}
+            </Text>
+
+            <TouchableOpacity
+              style={[
+                styles.calendarNavBtn,
+                isViewingCurrentMonth && styles.calendarNavBtnDisabled,
+              ]}
+              onPress={goNextMonth}
+              disabled={isViewingCurrentMonth}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <Icon
+                name="chevron-right"
+                size={20}
+                color={isViewingCurrentMonth ? COLORS.disabledDay : COLORS.headerText}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.calendarWeekdayRow}>
+            {WEEKDAY_LABELS.map((wd) => (
+              <View key={wd} style={styles.calendarWeekdayCell}>
+                <Text style={styles.calendarWeekdayText}>{wd}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.calendarGrid}>
+            {cells.map((cellDate, idx) => {
+              if (!cellDate) {
+                return <View key={`empty-${idx}`} style={styles.calendarDayCell} />;
+              }
+
+              const isFuture = cellDate > today && !isSameDay(cellDate, today);
+              const isSelected = isSameDay(cellDate, selectedDate);
+              const isToday = isSameDay(cellDate, today);
+
+              return (
+                <TouchableOpacity
+                  key={cellDate.toISOString()}
+                  style={styles.calendarDayCell}
+                  disabled={isFuture}
+                  onPress={() => onSelect(cellDate)}
+                >
+                  <View
+                    style={[
+                      styles.calendarDayInner,
+                      isSelected && styles.calendarDaySelected,
+                      isToday && !isSelected && styles.calendarDayToday,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.calendarDayText,
+                        isFuture && styles.calendarDayTextDisabled,
+                        isSelected && styles.calendarDayTextSelected,
+                      ]}
+                    >
+                      {cellDate.getDate()}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <TouchableOpacity style={styles.calendarTodayLink} onPress={handleJumpToday}>
+            <Text style={styles.calendarTodayLinkText}>Jump to Today</Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  );
+});
+
+// -------------------------------------------------------------------------
+// DateField — tappable field showing the selected date; opens the
+// CalendarModal ("calendar dropdown") on press.
+// -------------------------------------------------------------------------
+const DateField = memo(({ selectedDate, isToday, onChangeDate }) => {
+  const [calendarVisible, setCalendarVisible] = useState(false);
+
+  const openCalendar = useCallback(() => setCalendarVisible(true), []);
+  const closeCalendar = useCallback(() => setCalendarVisible(false), []);
+
+  const handleSelect = useCallback(
+    (date) => {
+      onChangeDate(date);
+      setCalendarVisible(false);
+    },
+    [onChangeDate]
+  );
+
+  return (
+    <View style={styles.dateFieldRow}>
+      <TouchableOpacity style={styles.dateFieldBtn} onPress={openCalendar}>
+        <Icon name="calendar-today" size={14} color={COLORS.headerText} />
+        <Text style={styles.dateFieldText}>{formatDateLabel(selectedDate)}</Text>
+        <Icon name="arrow-drop-down" size={18} color={COLORS.headerText} />
       </TouchableOpacity>
 
-      <Text style={styles.dateNavText}>{formatDateLabel(selectedDate)}</Text>
-
-      <TouchableOpacity
-        style={[styles.dateNavBtn, isToday && styles.dateNavBtnDisabled]}
-        onPress={isToday ? undefined : onNext}
-        disabled={isToday}
-        hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-      >
-        <Icon
-          name="chevron-right"
-          size={18}
-          color={isToday ? COLORS.border : COLORS.headerText}
-        />
-      </TouchableOpacity>
-
-      {isToday ? (
+      {isToday && (
         <View style={styles.liveBadge}>
           <View style={styles.liveDot} />
           <Text style={styles.liveBadgeText}>LIVE</Text>
         </View>
-      ) : (
-        <TouchableOpacity style={styles.todayBtn} onPress={onToday}>
-          <Text style={styles.todayBtnText}>Today</Text>
-        </TouchableOpacity>
       )}
+
+      <CalendarModal
+        visible={calendarVisible}
+        selectedDate={selectedDate}
+        onSelect={handleSelect}
+        onClose={closeCalendar}
+      />
     </View>
   );
 });
 
 // -------------------------------------------------------------------------
 // REAL-TIME / HISTORICAL GRAPH — custom SVG chart, fixed 00:00-23:59 axis
+// Pinch (2-finger) to zoom, 1-finger drag to pan, double-tap to reset.
 // -------------------------------------------------------------------------
 const screenWidth = Dimensions.get('window').width;
 const CHART_WIDTH = screenWidth - 64;
@@ -433,7 +591,9 @@ const CHART_PAD = { top: 14, right: 14, bottom: 26, left: 42 };
 const PLOT_WIDTH = CHART_WIDTH - CHART_PAD.left - CHART_PAD.right;
 const PLOT_HEIGHT = CHART_HEIGHT - CHART_PAD.top - CHART_PAD.bottom;
 
-const MIN_VIEW_SPAN = 20; // minutes — how far the user can zoom in
+const MIN_VIEW_SPAN = 20; // minutes — how far the user can pinch-zoom in
+const DOUBLE_TAP_MS = 300;
+const TAP_MOVE_TOLERANCE = 6; // px
 
 const getTickStepMinutes = (spanMinutes) => {
   if (spanMinutes <= 40) return 5;
@@ -468,6 +628,7 @@ const RealtimeChart = memo(({ seriesMap, nowMinutes, loading }) => {
   const [view, setView] = useState({ start: 0, end: DAY_MINUTES });
   const viewRef = useRef(view);
   const gestureRef = useRef(null);
+  const lastTapRef = useRef(0);
 
   useEffect(() => {
     viewRef.current = view;
@@ -478,16 +639,6 @@ const RealtimeChart = memo(({ seriesMap, nowMinutes, loading }) => {
   useEffect(() => {
     setView({ start: 0, end: DAY_MINUTES });
   }, [seriesMap]);
-
-  const zoomAroundCenter = useCallback((factor) => {
-    const current = viewRef.current;
-    const span = current.end - current.start;
-    const center = (current.start + current.end) / 2;
-    let newSpan = span / factor;
-    newSpan = Math.min(DAY_MINUTES, Math.max(MIN_VIEW_SPAN, newSpan));
-    const next = clampView(center - newSpan / 2, center + newSpan / 2);
-    setView(next);
-  }, []);
 
   const resetView = useCallback(() => {
     setView({ start: 0, end: DAY_MINUTES });
@@ -538,7 +689,20 @@ const RealtimeChart = memo(({ seriesMap, nowMinutes, loading }) => {
           );
         }
       },
-      onPanResponderRelease: () => {
+      onPanResponderRelease: (evt, gestureState) => {
+        const wasTap =
+          Math.abs(gestureState.dx) < TAP_MOVE_TOLERANCE &&
+          Math.abs(gestureState.dy) < TAP_MOVE_TOLERANCE;
+
+        if (wasTap) {
+          const now = Date.now();
+          if (now - lastTapRef.current < DOUBLE_TAP_MS) {
+            resetView();
+            lastTapRef.current = 0;
+          } else {
+            lastTapRef.current = now;
+          }
+        }
         gestureRef.current = null;
       },
       onPanResponderTerminate: () => {
@@ -609,36 +773,10 @@ const RealtimeChart = memo(({ seriesMap, nowMinutes, loading }) => {
   const hasAnyData = phases.some((p) => seriesMap[p] && seriesMap[p].length > 0);
   const nowVisible =
     nowMinutes != null && nowMinutes >= view.start && nowMinutes <= view.end;
+  const isZoomed = span < DAY_MINUTES - 1;
 
   return (
     <View>
-      <View style={styles.zoomControlsRow}>
-        <TouchableOpacity
-          style={styles.zoomBtn}
-          onPress={() => zoomAroundCenter(1.6)}
-          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-        >
-          <Icon name="add" size={16} color={COLORS.headerText} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.zoomBtn}
-          onPress={() => zoomAroundCenter(1 / 1.6)}
-          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-        >
-          <Icon name="remove" size={16} color={COLORS.headerText} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.zoomBtn}
-          onPress={resetView}
-          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-        >
-          <Icon name="refresh" size={16} color={COLORS.headerText} />
-        </TouchableOpacity>
-        <Text style={styles.zoomRangeText}>
-          {formatMinutes(view.start)} - {formatMinutes(view.end)}
-        </Text>
-      </View>
-
       <View {...panResponder.panHandlers} style={styles.chartTouchArea}>
         <Svg width={CHART_WIDTH} height={CHART_HEIGHT}>
           {/* Horizontal gridlines + Y axis labels */}
@@ -742,6 +880,17 @@ const RealtimeChart = memo(({ seriesMap, nowMinutes, loading }) => {
               strokeDasharray="4,4"
             />
           )}
+
+          {/* Current visible time-range, small label top-right (info only) */}
+          <SvgText
+            x={CHART_WIDTH - CHART_PAD.right}
+            y={CHART_PAD.top - 2}
+            fontSize={9}
+            fill={COLORS.subText}
+            textAnchor="end"
+          >
+            {`${formatMinutes(view.start)} - ${formatMinutes(view.end)}`}
+          </SvgText>
         </Svg>
 
         {!hasAnyData && (
@@ -749,12 +898,16 @@ const RealtimeChart = memo(({ seriesMap, nowMinutes, loading }) => {
             {loading ? (
               <ActivityIndicator size="small" color={COLORS.B} />
             ) : (
-              <Text style={styles.emptyPanelText}>
-                No data for this day
-              </Text>
+              <Text style={styles.emptyPanelText}>No data for this day</Text>
             )}
           </View>
         )}
+      </View>
+
+      <View style={styles.chartHintRow}>
+        <Text style={styles.chartHintText}>
+          Pinch to zoom · drag to pan{isZoomed ? ' · double-tap to reset' : ''}
+        </Text>
       </View>
 
       {/* Legend */}
@@ -776,7 +929,7 @@ const RealtimeChart = memo(({ seriesMap, nowMinutes, loading }) => {
 });
 
 // -------------------------------------------------------------------------
-// TemperatureGraph — wraps RealtimeChart with panel filter + date nav
+// TemperatureGraph — wraps RealtimeChart with panel filter + calendar
 // -------------------------------------------------------------------------
 const TemperatureGraph = memo(
   ({
@@ -844,22 +997,6 @@ const TemperatureGraph = memo(
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [device.panels, selectedPanel, historyEntry, historyVersion, dateKey]);
 
-    const handlePrevDay = useCallback(() => {
-      setSelectedDate((d) => addDays(d, -1));
-    }, []);
-
-    const handleNextDay = useCallback(() => {
-      setSelectedDate((d) => {
-        const next = addDays(d, 1);
-        // never allow navigating into the future
-        return dateKeyOf(next) > dateKeyOf(new Date()) ? d : next;
-      });
-    }, []);
-
-    const handleToday = useCallback(() => {
-      setSelectedDate(new Date());
-    }, []);
-
     return (
       <View style={styles.graphWrap} onLayout={onLayout}>
         <View style={styles.graphHeaderRow}>
@@ -871,12 +1008,10 @@ const TemperatureGraph = memo(
           />
         </View>
 
-        <DateNavigator
+        <DateField
           selectedDate={selectedDate}
           isToday={isToday}
-          onPrev={handlePrevDay}
-          onNext={handleNextDay}
-          onToday={handleToday}
+          onChangeDate={setSelectedDate}
         />
 
         <RealtimeChart
@@ -1482,6 +1617,8 @@ const cardShadow = Platform.select({
   },
 });
 
+const CALENDAR_CELL_SIZE = 36;
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -1663,41 +1800,28 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.headerText,
   },
-  dateNavRow: {
+
+  // Date field (opens calendar modal)
+  dateFieldRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
   },
-  dateNavBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+  dateFieldBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: COLORS.border,
-    justifyContent: 'center',
-    alignItems: 'center',
+    borderRadius: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
     backgroundColor: COLORS.card,
   },
-  dateNavBtnDisabled: {
-    opacity: 0.4,
-  },
-  dateNavText: {
+  dateFieldText: {
     fontSize: 12,
     fontWeight: '700',
     color: COLORS.headerText,
-    marginHorizontal: 8,
-  },
-  todayBtn: {
-    marginLeft: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: 8,
-    backgroundColor: COLORS.B,
-  },
-  todayBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#FFFFFF',
+    marginHorizontal: 6,
   },
   liveBadge: {
     flexDirection: 'row',
@@ -1720,27 +1844,97 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.live,
   },
-  zoomControlsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+
+  // Calendar modal
+  calendarCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 14,
+    padding: 16,
+    width: CALENDAR_CELL_SIZE * 7 + 32,
+    ...cardShadow,
   },
-  zoomBtn: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+  calendarHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  calendarNavBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: COLORS.border,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 6,
-    backgroundColor: COLORS.card,
   },
-  zoomRangeText: {
+  calendarNavBtnDisabled: {
+    opacity: 0.4,
+  },
+  calendarMonthText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: COLORS.headerText,
+  },
+  calendarWeekdayRow: {
+    flexDirection: 'row',
+  },
+  calendarWeekdayCell: {
+    width: CALENDAR_CELL_SIZE,
+    alignItems: 'center',
+    paddingBottom: 6,
+  },
+  calendarWeekdayText: {
     fontSize: 11,
+    fontWeight: '700',
     color: COLORS.subText,
-    marginLeft: 4,
   },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  calendarDayCell: {
+    width: CALENDAR_CELL_SIZE,
+    height: CALENDAR_CELL_SIZE,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  calendarDayInner: {
+    width: CALENDAR_CELL_SIZE - 6,
+    height: CALENDAR_CELL_SIZE - 6,
+    borderRadius: (CALENDAR_CELL_SIZE - 6) / 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  calendarDaySelected: {
+    backgroundColor: COLORS.B,
+  },
+  calendarDayToday: {
+    borderWidth: 1,
+    borderColor: COLORS.B,
+  },
+  calendarDayText: {
+    fontSize: 13,
+    color: COLORS.headerText,
+  },
+  calendarDayTextDisabled: {
+    color: COLORS.disabledDay,
+  },
+  calendarDayTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  calendarTodayLink: {
+    marginTop: 10,
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  calendarTodayLinkText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.B,
+  },
+
   chartTouchArea: {
     width: CHART_WIDTH,
     height: CHART_HEIGHT,
@@ -1753,6 +1947,14 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  chartHintRow: {
+    marginTop: 4,
+  },
+  chartHintText: {
+    fontSize: 10,
+    color: COLORS.subText,
+    fontStyle: 'italic',
   },
   legendRow: {
     flexDirection: 'row',

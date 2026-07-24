@@ -190,3 +190,63 @@ def telemetry_history():
         result.append(entry)
  
     return jsonify(result), 200
+
+
+
+
+# PHASE_COLUMNS = [
+#     'R1', 'Y1', 'B1', 'N1', 'R2', 'Y2', 'B2', 'N2',
+#     'R3', 'Y3', 'B3', 'N3', 'R4', 'Y4', 'B4', 'N4',
+#     'R5', 'Y5', 'B5', 'N5', 'R6', 'Y6', 'B6', 'N6',
+# ]
+
+
+
+
+# @telemetry.route('/api/telemetry-history', methods=['GET'])
+# def telemetry_history():
+#     """
+#     GET /api/telemetry-history?serial_no=WTSF0C01E&date=2026-07-20
+
+#     - serial_no : required, the device serial number
+#     - date      : optional, YYYY-MM-DD. Defaults to today (server-local date).
+
+#     Returns a list of rows for that device on that day, ordered by time:
+#     [
+#       { "timestamp": "2026-07-20T07:49:20", "R1": 29.44, "Y1": 29.27, ... },
+#       ...
+#     ]
+#     """
+#     serial_no = request.args.get('serial_no')
+#     date_str = request.args.get('date')
+
+#     if not serial_no:
+#         return jsonify({"error": "serial_no is required"}), 400
+
+#     if date_str:
+#         try:
+#             target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+#         except ValueError:
+#             return jsonify({"error": "date must be in YYYY-MM-DD format"}), 400
+#     else:
+#         target_date = date_cls.today()
+
+#     start = datetime.combine(target_date, datetime.min.time())
+#     end = datetime.combine(target_date, datetime.max.time())
+
+#     rows = (
+#         TempValues.query
+#         .filter(TempValues.serial_no == serial_no)
+#         .filter(TempValues.timestamp >= start, TempValues.timestamp <= end)
+#         .order_by(TempValues.timestamp.asc())
+#         .all()
+#     )
+
+#     result = []
+#     for r in rows:
+#         entry = {"timestamp": r.timestamp.isoformat()}
+#         for col in PHASE_COLUMNS:
+#             entry[col] = getattr(r, col)
+#         result.append(entry)
+
+#     return jsonify(result), 200
