@@ -54,6 +54,11 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import io from 'socket.io-client';
 import auth from '@react-native-firebase/auth';
 
+import { verifyDeviceWifi } from '../services/WifiService';
+import { resetDeviceRemote } from './DeviceConfig';
+
+
+
 // -------------------------------------------------------------------------
 // BACKEND CONFIG
 // -------------------------------------------------------------------------
@@ -977,10 +982,10 @@ const TemperatureGraph = memo(
         selectedPanel === 'All Panels'
           ? device.panels
           : device.panels.filter(
-              (panel) =>
-                (panel.custom_name || `Panel ${panel.panel_no}`) ===
-                selectedPanel
-            );
+            (panel) =>
+              (panel.custom_name || `Panel ${panel.panel_no}`) ===
+              selectedPanel
+          );
 
       const includedPhases = new Set();
       panelsToInclude.forEach((panel) => {
@@ -1139,8 +1144,7 @@ const DeviceCard = memo(
 const HEADER_MENU_OPTIONS = [
   'Reset WiFi',
   'Change WiFi',
-  'SMS Enable',
-  'Email Enable',
+
 ];
 
 const HeaderMenu = memo(({ onSelect }) => {
@@ -1450,9 +1454,36 @@ const WtsDashboard = () => {
     console.log(`Edit requested: device=${serialNo} panel=${panelNo}`);
   }, []);
 
-  const handleMenuSelect = useCallback((option) => {
-    console.log(`Header menu option selected: ${option}`);
-  }, []);
+
+  const handleMenuSelect = useCallback(async (option) => {
+
+    if (!selectedProduct) return;
+
+    const deviceId = selectedProduct?.serial_no;
+    console.log(deviceId);
+
+    const verified = await verifyDeviceWifi(deviceId);
+
+    if (!verified)
+      return;
+
+    if (option === "Reset WiFi") {
+
+      navigation.navigate("DeviceConfig", {
+        product: selectedProduct?.serial_no
+      });
+
+    }
+
+    if (option === "Change WiFi") {
+
+      navigation.navigate("DeviceConfig", {
+        product: selectedProduct?.serial_no
+      });
+
+    }
+
+  }, [selectedProduct, navigation]);
 
   const handleBackPress = useCallback(() => {
     if (navigation.canGoBack()) {

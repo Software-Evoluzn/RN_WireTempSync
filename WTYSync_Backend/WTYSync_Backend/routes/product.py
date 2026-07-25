@@ -4,7 +4,7 @@ from flask import jsonify
 
 from database.db import db
 from datetime import datetime, timedelta
-from models.RegisterProuct import RegisterProduct
+from models.RegisterProduct import RegisterProduct
 from models.control_panel import ControlPanel 
 
 

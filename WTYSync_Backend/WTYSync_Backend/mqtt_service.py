@@ -1,6 +1,10 @@
 import json
+from datetime import datetime, timedelta
+from apscheduler.schedulers.background import BackgroundScheduler
 import paho.mqtt.client as mqtt
 
+from database.db import db
+from models.RegisterProduct import RegisterProduct
 from routes.telemetry import process_and_save_mqtt_data
 
 broker = "evoluzn.org"
@@ -13,14 +17,65 @@ client.username_pw_set(username, password)
 
 flask_app = None
 socketio_instance = None
+scheduler = None
+
+
+def check_inactive_devices():
+    """Periodically checks for devices that haven't sent data recently
+    and marks them offline (online_status = 0).
+    """
+    print("⏰ [Scheduler] Running check for inactive devices...")
+    if not flask_app:
+        print("⚠️ [Scheduler] flask_app is None, skipping check.")
+        return
+
+    with flask_app.app_context():
+        try:
+            # ✅ STRICT LOCAL TIME MATCHING DATABASE TIMESTAMPS
+            timeout_threshold = datetime.now() - timedelta(minutes=3)
+
+            # Query active devices (1) that haven't updated last_seen in > 3 minutes
+            updated_count = (
+                db.session.query(RegisterProduct)
+                .filter(
+                    RegisterProduct.online_status == 1,
+                    RegisterProduct.last_seen < timeout_threshold,
+                )
+                .update({"online_status": 0}, synchronize_session=False)
+            )
+
+            db.session.commit()
+
+            if updated_count > 0:
+                print(
+                    f"✅ [Scheduler] Marked {updated_count} inactive device(s) as offline (online_status = 0)."
+                )
+            else:
+                print("ℹ️ [Scheduler] All active devices are up to date.")
+
+        except Exception as e:
+            db.session.rollback()
+            print("❌ [Scheduler] Error updating offline status:", str(e))
 
 
 def init_app(app, socketio_ref=None):
-    global flask_app, socketio_instance
+    global flask_app, socketio_instance, scheduler
     flask_app = app
     socketio_instance = socketio_ref
+
     if socketio_instance is None:
-        print("⚠️ WARNING: socketio_instance not set! Live telemetry emit will not work.")
+        print(
+            "⚠️ WARNING: socketio_instance not set! Live telemetry emit will not work."
+        )
+
+    # Initialize and start background scheduler to check for offline devices every 60 seconds
+    if scheduler is None:
+        scheduler = BackgroundScheduler()
+        scheduler.add_job(
+            func=check_inactive_devices, trigger="interval", seconds=60
+        )
+        scheduler.start()
+        print("✅ Background offline status checker started successfully.")
 
 
 def on_connect(client, userdata, flags, rc):
@@ -44,7 +99,7 @@ def on_message(client, userdata, msg):
         return
 
     serial = topic.split("/")[0]
-    raw_payload = msg.payload.decode('utf-8')
+    raw_payload = msg.payload.decode("utf-8")
 
     print(f"Data --> {topic} | Payload: {raw_payload}")
 
@@ -53,14 +108,28 @@ def on_message(client, userdata, msg):
         return
 
     with flask_app.app_context():
+        # ✅ HANDLE EXPLICIT LWT OFFLINE PAYLOADS (e.g., {WTSF0C045:offline})
+        if "offline" in raw_payload.lower():
+            try:
+                product = RegisterProduct.query.filter_by(serial_no=serial).first()
+                if product:
+                    product.online_status = 0
+                    db.session.commit()
+                    print(f"🔴 Device {serial} explicitly sent offline status.")
+            except Exception as e:
+                db.session.rollback()
+                print(f"❌ Error setting offline status for {serial}:", str(e))
+            return
+
+        # 1. Process telemetry and save to DB
         process_and_save_mqtt_data(serial, raw_payload)
 
-        # -------------------------------------------------------------
-        # LIVE SOCKET.IO EMIT: Push telemetry to frontend in real time
-        # -------------------------------------------------------------
+        # 2. Live Socket.IO Emit
         try:
             if socketio_instance is None:
-                print("⚠️ socketio_instance is None, cannot emit live telemetry")
+                print(
+                    "⚠️ socketio_instance is None, cannot emit live telemetry"
+                )
                 return
 
             if "device_id" in raw_payload:
@@ -71,15 +140,18 @@ def on_message(client, userdata, msg):
                     float_values = []
                     for val in parts[2:]:
                         try:
-                            float_values.append(float(val))
+                            float_values.append(float(val.strip()))
                         except ValueError:
                             pass
 
                     if len(float_values) > 0:
                         column_order = [
-                            'R1', 'Y1', 'B1', 'N1', 'R2', 'Y2', 'B2', 'N2',
-                            'R3', 'Y3', 'B3', 'N3', 'R4', 'Y4', 'B4', 'N4',
-                            'R5', 'Y5', 'B5', 'N5', 'R6', 'Y6', 'B6', 'N6'
+                            "R1", "Y1", "B1", "N1",
+                            "R2", "Y2", "B2", "N2",
+                            "R3", "Y3", "B3", "N3",
+                            "R4", "Y4", "B4", "N4",
+                            "R5", "Y5", "B5", "N5",
+                            "R6", "Y6", "B6", "N6",
                         ]
 
                         panels_dict = {}
@@ -91,28 +163,32 @@ def on_message(client, userdata, msg):
                                 if panel_no not in panels_dict:
                                     panels_dict[panel_no] = []
 
-                                panels_dict[panel_no].append({
-                                    "phase": col,
-                                    "current": val,
-                                    "min": val,
-                                    "max": val
-                                })
+                                panels_dict[panel_no].append(
+                                    {
+                                        "phase": col,
+                                        "current": val,
+                                        "min": val,
+                                        "max": val,
+                                    }
+                                )
 
                         formatted_panels = [
-                            {
-                                "panel_no": p_no,
-                                "temperatures": temps
-                            } for p_no, temps in panels_dict.items()
+                            {"panel_no": p_no, "temperatures": temps}
+                            for p_no, temps in panels_dict.items()
                         ]
 
                         telemetry_payload = {
                             "serial_no": serial,
                             "status": "Online",
-                            "panels": formatted_panels
+                            "panels": formatted_panels,
                         }
 
-                        socketio_instance.emit("live_telemetry", telemetry_payload)
-                        print("Successfully emitted live telemetry for:", serial)
+                        socketio_instance.emit(
+                            "live_telemetry", telemetry_payload
+                        )
+                        print(
+                            "Successfully emitted live telemetry for:", serial
+                        )
 
         except Exception as e:
             print("Error emitting live socket telemetry from MQTT:", str(e))

@@ -9,7 +9,8 @@ import styles from '../styles/WiFiListStyles';
 
 
 
-export default function HomeWifiListScreen({ navigation }) {
+export default function HomeWifiListScreen({ navigation ,route}) {
+  const {product , firebase_uid} = route.params;
   const [networks, setNetworks] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -54,7 +55,7 @@ export default function HomeWifiListScreen({ navigation }) {
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={styles.networkRow}
-      onPress={() => navigation.navigate('Password', { network: item })}
+      onPress={() => navigation.navigate('Password', { network: item ,product,firebase_uid})}
     >
       <View style={[styles.signalDot, { backgroundColor: '#1D9E75' }]} />
       <View style={{ flex: 1 }}>

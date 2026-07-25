@@ -237,6 +237,7 @@ const HomeScreen = ({ navigation }) => {
                     } else {
                       navigation.navigate("DeviceConfig", {
                         product: item,
+                        firebase_uid:user.firebase_uid
                       });
                     }
                   }}

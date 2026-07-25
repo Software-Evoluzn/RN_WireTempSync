@@ -1,38 +1,55 @@
 from flask import Blueprint, jsonify, request
 from database.db import db
-from models.RegisterProuct import RegisterProduct
+from models.RegisterProduct import RegisterProduct
 from models.temp_values import TempValues
 from models.control_panel import ControlPanel
 from datetime import datetime, date as date_cls
 
-# Create a Blueprint just like you did in product.py
 telemetry = Blueprint("telemetry", __name__)
 
 def process_and_save_mqtt_data(serial, raw_payload):
     """
     Helper function called by mqtt_service.py to process background data.
     """
-    # 1. Update Online Status
-    product = RegisterProduct.query.filter_by(serial_no=serial).first()
-    
-    if product:
-        product.online_status = True
-        product.last_seen = datetime.utcnow()
-    else:
-        # FIXED: Added a pass statement to prevent the IndentationError/SyntaxError
-        pass
+    # ---------------------------------------------------------
+    # 1. Update Online Status Immediately
+    # ---------------------------------------------------------
+    try:
+        product = RegisterProduct.query.filter_by(serial_no=serial).first()
+        if product:
+            product.online_status = True
+            product.last_seen = datetime.now()
+            db.session.commit()
+        else:
+            return
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Error updating status/last_seen for {serial}: {e}")
 
-    # 2. Parse and Insert Telemetry Data
+    # ---------------------------------------------------------
+    # 2. Parse and Insert Telemetry Data Safely
+    # ---------------------------------------------------------
     if "{device_id:" in raw_payload:
         try:
-            # Clean the string and split it
             clean_string = raw_payload.strip("{} ")
             parts = clean_string.split(":")
             
             if len(parts) > 2:
-                float_values = [float(val) for val in parts[2:]]
+                float_values = []
                 
-                # The exact sequential order of your 24 columns
+                # Safely parse numeric values and ignore non-numeric warning strings
+                for val in parts[2:]:
+                    val_str = val.strip()
+                    try:
+                        float_values.append(float(val_str))
+                    except ValueError:
+                        # Skip string logs like 'Temprature is > 48'
+                        continue
+                
+                if not float_values:
+                    return
+
+                # Sequential order of the 24 columns
                 column_order = [
                     'R1', 'Y1', 'B1', 'N1', 'R2', 'Y2', 'B2', 'N2',
                     'R3', 'Y3', 'B3', 'N3', 'R4', 'Y4', 'B4', 'N4',
@@ -41,20 +58,19 @@ def process_and_save_mqtt_data(serial, raw_payload):
                 
                 record_data = {'serial_no': serial}
                 
-                # Map the incoming array values to their specific column names
+                # Map array values to matching column names
                 for index, value in enumerate(float_values):
                     if index < len(column_order):
                         record_data[column_order[index]] = value
                         
-                # Create the new record object
+                # Create and commit the telemetry entry
                 new_temp_record = TempValues(**record_data)
                 db.session.add(new_temp_record)
-                
-        except Exception as e:
-            print("Error parsing/saving telemetry data:", str(e))
+                db.session.commit()
 
-    # Commit both the status update and the new temperatures at once
-    db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"❌ Error parsing/saving telemetry data for {serial}: {e}")
 
 
 # ---------------------------------------------------------
@@ -64,7 +80,7 @@ def process_and_save_mqtt_data(serial, raw_payload):
 def get_dashboard_data():
     """
     Expects { "firebase_uid": "user_uid_here" }
-    Returns the live dashboard data specifically for this user's devices.
+    Returns live dashboard data specifically for this user's devices.
     """
     print("\nGET DASHBOARD API CALLED =================")
     data = request.get_json()
@@ -73,7 +89,7 @@ def get_dashboard_data():
     if not firebase_uid:
         return jsonify({"success": False, "message": "Firebase UID required"}), 400
 
-    # 1. Get only the devices this specific user owns
+    # 1. Get devices owned by this specific user
     user_products = RegisterProduct.query.filter_by(firebase_uid=firebase_uid).all()
     
     frontend_data = []
@@ -81,14 +97,13 @@ def get_dashboard_data():
     for product in user_products:
         status_text = "Online" if product.online_status else "Offline"
         
-        # 2. Get the latest temperature row for this device
+        # 2. Get latest temperature record
         latest_data = TempValues.query.filter_by(serial_no=product.serial_no)\
                                     .order_by(TempValues.timestamp.desc())\
                                     .first()
                                     
-        # 3. Get all custom panel names for this device
+        # 3. Get custom panel names
         custom_panels = ControlPanel.query.filter_by(serial_no=product.serial_no).all()
-        # Convert to a dictionary for easy lookup: {1: "Living Room", 2: "Kitchen"}
         panel_names_dict = {p.panel_index: p.custom_name for p in custom_panels}
         
         panels_data = []
@@ -96,11 +111,9 @@ def get_dashboard_data():
         if latest_data:
             phases = ['R', 'Y', 'B', 'N']
             
-            # Loop through the 6 possible panels
             for panel_no in range(1, 7):
                 panel_temps = []
                 
-                # If R column is not null, this panel has data and exists
                 if getattr(latest_data, f"R{panel_no}") is not None:
                     for phase in phases:
                         col_name = f"{phase}{panel_no}"
@@ -112,57 +125,43 @@ def get_dashboard_data():
                             "max": val  
                         })
                     
-                    # Fetch custom name if it exists, otherwise default to "Control Panel X"
                     custom_name = panel_names_dict.get(panel_no, f"Control Panel {panel_no}")
                     
                     panels_data.append({
                         "panel_no": panel_no,
-                        "custom_name": custom_name, # Pass this to the frontend!
+                        "custom_name": custom_name,
                         "temperatures": panel_temps
                     })
 
-        # Append this device to the final array
         frontend_data.append({
             "device_name": product.device_name,
             "serial_no": product.serial_no,
             "status": status_text,
             "panels": panels_data,
-            "graph": [] # Placeholder for now
+            "graph": []
         })
         
     print(f"Successfully returning dashboard data for {len(user_products)} devices.")
-        
     return jsonify(frontend_data), 200
 
-# history in graph
 
+# ---------------------------------------------------------
+# Telemetry History Route
+# ---------------------------------------------------------
 PHASE_COLUMNS = [
     'R1', 'Y1', 'B1', 'N1', 'R2', 'Y2', 'B2', 'N2',
     'R3', 'Y3', 'B3', 'N3', 'R4', 'Y4', 'B4', 'N4',
     'R5', 'Y5', 'B5', 'N5', 'R6', 'Y6', 'B6', 'N6',
 ]
- 
- 
+
 @telemetry.route('/api/telemetry-history', methods=['GET'])
 def telemetry_history():
-    """
-    GET /api/telemetry-history?serial_no=WTSF0C01E&date=2026-07-20
- 
-    - serial_no : required, the device serial number
-    - date      : optional, YYYY-MM-DD. Defaults to today (server-local date).
- 
-    Returns a list of rows for that device on that day, ordered by time:
-    [
-      { "timestamp": "2026-07-20T07:49:20", "R1": 29.44, "Y1": 29.27, ... },
-      ...
-    ]
-    """
     serial_no = request.args.get('serial_no')
     date_str = request.args.get('date')
- 
+
     if not serial_no:
         return jsonify({"error": "serial_no is required"}), 400
- 
+
     if date_str:
         try:
             target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
@@ -170,10 +169,10 @@ def telemetry_history():
             return jsonify({"error": "date must be in YYYY-MM-DD format"}), 400
     else:
         target_date = date_cls.today()
- 
+
     start = datetime.combine(target_date, datetime.min.time())
     end = datetime.combine(target_date, datetime.max.time())
- 
+
     rows = (
         TempValues.query
         .filter(TempValues.serial_no == serial_no)
@@ -181,72 +180,12 @@ def telemetry_history():
         .order_by(TempValues.timestamp.asc())
         .all()
     )
- 
+
     result = []
     for r in rows:
         entry = {"timestamp": r.timestamp.isoformat()}
         for col in PHASE_COLUMNS:
             entry[col] = getattr(r, col)
         result.append(entry)
- 
+
     return jsonify(result), 200
-
-
-
-
-# PHASE_COLUMNS = [
-#     'R1', 'Y1', 'B1', 'N1', 'R2', 'Y2', 'B2', 'N2',
-#     'R3', 'Y3', 'B3', 'N3', 'R4', 'Y4', 'B4', 'N4',
-#     'R5', 'Y5', 'B5', 'N5', 'R6', 'Y6', 'B6', 'N6',
-# ]
-
-
-
-
-# @telemetry.route('/api/telemetry-history', methods=['GET'])
-# def telemetry_history():
-#     """
-#     GET /api/telemetry-history?serial_no=WTSF0C01E&date=2026-07-20
-
-#     - serial_no : required, the device serial number
-#     - date      : optional, YYYY-MM-DD. Defaults to today (server-local date).
-
-#     Returns a list of rows for that device on that day, ordered by time:
-#     [
-#       { "timestamp": "2026-07-20T07:49:20", "R1": 29.44, "Y1": 29.27, ... },
-#       ...
-#     ]
-#     """
-#     serial_no = request.args.get('serial_no')
-#     date_str = request.args.get('date')
-
-#     if not serial_no:
-#         return jsonify({"error": "serial_no is required"}), 400
-
-#     if date_str:
-#         try:
-#             target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-#         except ValueError:
-#             return jsonify({"error": "date must be in YYYY-MM-DD format"}), 400
-#     else:
-#         target_date = date_cls.today()
-
-#     start = datetime.combine(target_date, datetime.min.time())
-#     end = datetime.combine(target_date, datetime.max.time())
-
-#     rows = (
-#         TempValues.query
-#         .filter(TempValues.serial_no == serial_no)
-#         .filter(TempValues.timestamp >= start, TempValues.timestamp <= end)
-#         .order_by(TempValues.timestamp.asc())
-#         .all()
-#     )
-
-#     result = []
-#     for r in rows:
-#         entry = {"timestamp": r.timestamp.isoformat()}
-#         for col in PHASE_COLUMNS:
-#             entry[col] = getattr(r, col)
-#         result.append(entry)
-
-#     return jsonify(result), 200

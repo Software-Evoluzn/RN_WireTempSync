@@ -24,6 +24,8 @@ export default function DeviceConfig({ navigation, route }) {
 
   const [espOnline, setEspOnline] = useState(false);
 
+  const { product, firebase_uid } = route.params;
+
   useEffect(() => {
     // Background mein check karo ESP32 already WiFi pe hai?
     const zeroconf = new Zeroconf();
@@ -68,7 +70,7 @@ export default function DeviceConfig({ navigation, route }) {
     setLoading(true);
     const ok = await requestPermissions();
     if (!ok) {
-      Alert.alert('Permission Required', 'Location permission chahiye.', [
+      Alert.alert('Permission Required', 'Location permission needed.', [
         { text: 'Open Settings', onPress: () => Linking.openSettings() },
       ]);
       setLoading(false);
@@ -115,7 +117,10 @@ export default function DeviceConfig({ navigation, route }) {
       }
       const connected = await waitForConnection(ESP_SSID_PREFIX);
       if (connected) {
-        navigation.navigate('HomeWifiListScreen');
+        navigation.navigate('HomeWifiListScreen', {
+          product,
+          firebase_uid
+        });
       } else {
         Alert.alert('Failed', 'Could not connect to ESP32.', [
           { text: 'Try Again', onPress: () => connectToESP(network) },
@@ -139,36 +144,81 @@ export default function DeviceConfig({ navigation, route }) {
 
   // ── resetDeviceRemote REPLACE KARO ─────────────
   const resetDeviceRemote = async () => {
-    Alert.alert('Reset Device', 'ESP32 ko remotely reset karein?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Reset', style: 'destructive', onPress: async () => {
-          setResetting(true);
-          try {
-            const ip = await resolveEspIp();           // mDNS / cached
-            console.log('ESP32 found at:', ip);
-            // reset ke baad device turant restart karta hai -> fetch error aa sakta hai, normal hai
-           const res =  await fetch(`http://${ip}/reset_wifi`).catch(() => { });
-
-           if(res.ok){
-            console.log("Esp32 connected with wifi")
-                Alert.alert('Done', 'Device AP mode me restart ho raha hai. Ab "ESP..." network scan karein.', [
-              { text: 'Scan Again', onPress: () => { setLoading(true); setTimeout(scanWifiNetworks, 6000); } },
-            ]);
-           }else{
-            console.log("Esp32 not connect with wifi")
-            Alert.alert('Fail' , "Device nahi mil raha" )
-           }
-
-          
-          } catch (e) {
-            Alert.alert('Error', 'ESP32 nahi mila. Phone aur ESP32 same WiFi pe hone chahiye.');
-          } finally {
-            setResetting(false);
-          }
+    Alert.alert(
+      "Reset Device",
+      "Reset ESP32 remotely?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
         },
-      },
-    ]);
+        {
+          text: "Reset",
+          style: "destructive",
+          onPress: async () => {
+            setResetting(true);
+
+            try {
+              const ip = await resolveEspIp();
+
+              console.log("ESP32 found at:", ip);
+
+              if (!ip) {
+                Alert.alert("Error", "ESP32 IP not found.");
+                return;
+              }
+
+              const url = `http://${ip}/reset_wifi`;
+
+              console.log("Calling:", url);
+
+              const res = await fetch(url, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+              });
+
+              console.log("HTTP Status:", res.status);
+              console.log("Response OK:", res.ok);
+
+              const text = await res.text();
+              console.log("Response Body:", text);
+
+              if (res.ok) {
+                Alert.alert(
+                  "Done",
+                  "Device is restarting into AP mode.",
+                  [
+                    {
+                      text: "Scan Again",
+                      onPress: () => {
+                        setLoading(true);
+                        setTimeout(scanWifiNetworks, 6000);
+                      },
+                    },
+                  ]
+                );
+              } else {
+                Alert.alert(
+                  "Failed",
+                  `Server returned ${res.status}\n${text}`
+                );
+              }
+            } catch (err) {
+              console.log("Reset Error:", err);
+
+              Alert.alert(
+                "Error",
+                err.message || "Unable to communicate with ESP32."
+              );
+            } finally {
+              setResetting(false);
+            }
+          },
+        },
+      ]
+    );
   };
   const onRefresh = useCallback(async () => { setRefreshing(true); await scanWifiNetworks(); }, []);
 
