@@ -9,8 +9,7 @@ import styles from '../styles/WiFiListStyles';
 
 
 
-export default function HomeWifiListScreen({ navigation ,route}) {
-  const {product , firebase_uid} = route.params;
+export default function HomeWifiListScreen({ navigation }) {
   const [networks, setNetworks] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -37,7 +36,7 @@ export default function HomeWifiListScreen({ navigation ,route}) {
       const filteredList = wifiList.filter(item =>
         item.SSID &&
         item.SSID.length > 0 &&
-        !item.SSID.startsWith('ESP') &&   // ESP AP hide
+        !item.SSID.startsWith('WTS') &&   // ESP AP hide
         item.frequency >= 2400 &&
         item.frequency <= 2500
       );
@@ -55,7 +54,7 @@ export default function HomeWifiListScreen({ navigation ,route}) {
   const renderItem = ({ item }) => (
     <TouchableOpacity
       style={styles.networkRow}
-      onPress={() => navigation.navigate('Password', { network: item ,product,firebase_uid})}
+      onPress={() => navigation.navigate('Password', { network: item })}
     >
       <View style={[styles.signalDot, { backgroundColor: '#1D9E75' }]} />
       <View style={{ flex: 1 }}>

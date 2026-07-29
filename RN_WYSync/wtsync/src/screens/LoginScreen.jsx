@@ -16,8 +16,12 @@ import Feather from 'react-native-vector-icons/Feather';
 
 import { loginUser } from '../services/AuthService';
 import { googleLogin } from '../services/AuthService';
+import { useAppTheme } from '../services/theme';
 
 const LoginScreen = ({ navigation }) => {
+  const { colors, isDark } = useAppTheme();
+  const styles = createStyles(colors);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -79,7 +83,7 @@ const LoginScreen = ({ navigation }) => {
             <Text style={styles.label}>Email</Text>
             <TextInput
               placeholder="you@example.com"
-              placeholderTextColor="#B4B7C0"
+              placeholderTextColor={colors.subText}
               style={[styles.input, focused === 'email' && styles.inputFocused]}
               value={email}
               onChangeText={setEmail}
@@ -99,7 +103,7 @@ const LoginScreen = ({ navigation }) => {
               ]}>
               <TextInput
                 placeholder="••••••••"
-                placeholderTextColor="#B4B7C0"
+                placeholderTextColor={colors.subText}
                 style={styles.passwordInput}
                 value={password}
                 onChangeText={setPassword}
@@ -113,7 +117,7 @@ const LoginScreen = ({ navigation }) => {
                 <Feather
                   name={showPassword ? 'eye-off' : 'eye'}
                   size={18}
-                  color="#8A8F98"
+                  color={colors.subText}
                 />
               </TouchableOpacity>
             </View>
@@ -149,11 +153,15 @@ const LoginScreen = ({ navigation }) => {
             activeOpacity={0.85}
             disabled={googleLoading}>
             {googleLoading ? (
-              <ActivityIndicator color="#5B5F6B" />
+              <ActivityIndicator color={colors.subText} />
             ) : (
               <>
                 <Image
-                  source={require('../assests/images/google.png')}
+                  source={
+                    isDark
+                      ? require('../assests/images/googledark.png')
+                      : require('../assests/images/google.png')
+                  }
                   style={styles.googleIconFallback}
                 />
                 <Text style={styles.googleText}>Continue with Google</Text>
@@ -177,8 +185,8 @@ const LoginScreen = ({ navigation }) => {
 
 export default LoginScreen;
 
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#FAFAFB' },
+const createStyles = (colors) => StyleSheet.create({
+  flex: { flex: 1, backgroundColor: colors.background },
   container: {
     flexGrow: 1,
     justifyContent: 'center',
@@ -189,13 +197,13 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 20,
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#F0F1F4',
+    borderColor: colors.border,
     shadowColor: '#0B0D12',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.05,
@@ -209,23 +217,23 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#0B0D12',
+    color: colors.text,
     textAlign: 'center',
     letterSpacing: -0.4,
   },
   subtitle: {
     fontSize: 14,
-    color: '#8A8F98',
+    color: colors.subText,
     textAlign: 'center',
     marginTop: 6,
     marginBottom: 32,
   },
   form: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     borderRadius: 22,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#F0F1F4',
+    borderColor: colors.border,
     shadowColor: '#0B0D12',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.04,
@@ -238,32 +246,32 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#5B5F6B',
+    color: colors.subText,
     marginBottom: 8,
     letterSpacing: 0.2,
   },
   input: {
     borderWidth: 1.5,
-    borderColor: '#EEEFF2',
-    backgroundColor: '#FAFAFB',
+    borderColor: colors.border,
+    backgroundColor: colors.background,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 15,
     fontWeight: '500',
-    color: '#0B0D12',
+    color: colors.text,
   },
   inputFocused: {
     borderColor: '#4F46E5',
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
   },
   passwordWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1.5,
-    borderColor: '#EEEFF2',
-    backgroundColor: '#FAFAFB',
+    borderColor: colors.border,
+    backgroundColor: colors.background,
     borderRadius: 12,
     paddingHorizontal: 14,
   },
@@ -272,7 +280,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 15,
     fontWeight: '500',
-    color: '#0B0D12',
+    color: colors.text,
   },
   forgotWrapper: { alignSelf: 'flex-end', marginTop: 2, marginBottom: 20 },
   forgotText: { color: '#4F46E5', fontWeight: '600', fontSize: 13 },
@@ -293,10 +301,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 22,
   },
-  divider: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: '#EEEFF2' },
+  divider: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
   dividerText: {
     marginHorizontal: 12,
-    color: '#B4B7C0',
+    color: colors.subText,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -305,9 +313,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     borderWidth: 1.5,
-    borderColor: '#EEEFF2',
+    borderColor: colors.border,
     paddingVertical: 15,
     borderRadius: 14,
     gap: 10,
@@ -316,8 +324,8 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
   },
-  googleText: { color: '#2A2D34', fontSize: 14, fontWeight: '600' },
+  googleText: { color: colors.text, fontSize: 14, fontWeight: '600' },
   footer: { marginTop: 28, alignItems: 'center' },
-  footerText: { color: '#8A8F98', fontSize: 14 },
+  footerText: { color: colors.subText, fontSize: 14 },
   footerLink: { color: '#4F46E5', fontWeight: '700' },
 });

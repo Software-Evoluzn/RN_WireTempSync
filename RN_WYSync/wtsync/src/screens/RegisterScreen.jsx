@@ -15,8 +15,12 @@ import {
 import Feather from 'react-native-vector-icons/Feather';
 
 import { registerUser } from '../services/AuthService';
+import { useAppTheme } from '../services/theme';
 
 const RegisterScreen = ({ navigation }) => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -65,7 +69,7 @@ const RegisterScreen = ({ navigation }) => {
       <Text style={styles.label}>{placeholder}</Text>
       <TextInput
         placeholder={placeholder}
-        placeholderTextColor="#B4B7C0"
+        placeholderTextColor={colors.subText}
         style={[styles.input, focused === key && styles.inputFocused]}
         value={value}
         onChangeText={setter}
@@ -122,7 +126,7 @@ const RegisterScreen = ({ navigation }) => {
               ]}>
               <TextInput
                 placeholder="Password"
-                placeholderTextColor="#B4B7C0"
+                placeholderTextColor={colors.subText}
                 style={styles.passwordInput}
                 value={password}
                 onChangeText={setPassword}
@@ -136,7 +140,7 @@ const RegisterScreen = ({ navigation }) => {
                 <Feather
                   name={showPassword ? 'eye-off' : 'eye'}
                   size={18}
-                  color="#8A8F98"
+                  color={colors.subText}
                 />
               </TouchableOpacity>
             </View>
@@ -178,8 +182,8 @@ const RegisterScreen = ({ navigation }) => {
 
 export default RegisterScreen;
 
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#FAFAFB' },
+const createStyles = (colors) => StyleSheet.create({
+  flex: { flex: 1, backgroundColor: colors.background },
   container: {
     flexGrow: 1,
     justifyContent: 'center',
@@ -190,13 +194,13 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 20,
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: '#F0F1F4',
+    borderColor: colors.border,
     shadowColor: '#0B0D12',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.05,
@@ -210,23 +214,23 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#0B0D12',
+    color: colors.text,
     textAlign: 'center',
     letterSpacing: -0.4,
   },
   subtitle: {
     fontSize: 14,
-    color: '#8A8F98',
+    color: colors.subText,
     textAlign: 'center',
     marginTop: 6,
     marginBottom: 32,
   },
   form: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     borderRadius: 22,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#F0F1F4',
+    borderColor: colors.border,
     shadowColor: '#0B0D12',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.04,
@@ -239,29 +243,29 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#5B5F6B',
+    color: colors.subText,
     marginBottom: 8,
     letterSpacing: 0.2,
   },
   input: {
     borderWidth: 1.5,
-    borderColor: '#EEEFF2',
-    backgroundColor: '#FAFAFB',
+    borderColor: colors.border,
+    backgroundColor: colors.background,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 15,
     fontWeight: '500',
-    color: '#0B0D12',
+    color: colors.text,
   },
-  inputFocused: { borderColor: '#4F46E5', backgroundColor: '#fff' },
+  inputFocused: { borderColor: '#4F46E5', backgroundColor: colors.card },
   passwordWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1.5,
-    borderColor: '#EEEFF2',
-    backgroundColor: '#FAFAFB',
+    borderColor: colors.border,
+    backgroundColor: colors.background,
     borderRadius: 12,
     paddingHorizontal: 14,
   },
@@ -270,7 +274,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 15,
     fontWeight: '500',
-    color: '#0B0D12',
+    color: colors.text,
   },
   button: {
     backgroundColor: '#0B0D12',
@@ -286,6 +290,6 @@ const styles = StyleSheet.create({
   },
   buttonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   footer: { marginTop: 28, alignItems: 'center' },
-  footerText: { color: '#8A8F98', fontSize: 14 },
+  footerText: { color: colors.subText, fontSize: 14 },
   footerLink: { color: '#4F46E5', fontWeight: '700' },
 });

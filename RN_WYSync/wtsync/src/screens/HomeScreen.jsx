@@ -15,8 +15,13 @@ import Feather from 'react-native-vector-icons/Feather';
 import { getUserDetails } from '../services/AuthService';
 
 import { getProducts } from '../services/ProductApi';
+import { useAppTheme } from '../services/theme';
+
 
 const HomeScreen = ({ navigation }) => {
+  const { colors, isDark } = useAppTheme();
+  const styles = createStyles(colors);
+
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -148,7 +153,10 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FAFAFB" />
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
 
       <View style={styles.container}>
         {/* Header */}
@@ -237,7 +245,6 @@ const HomeScreen = ({ navigation }) => {
                     } else {
                       navigation.navigate("DeviceConfig", {
                         product: item,
-                        firebase_uid:user.firebase_uid
                       });
                     }
                   }}
@@ -347,10 +354,10 @@ const HomeScreen = ({ navigation }) => {
 
 export default HomeScreen;
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   safe: {
     flex: 1,
-    backgroundColor: '#FAFAFB',
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
@@ -367,14 +374,14 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: colors.subText,
     letterSpacing: 0.8,
     marginBottom: 8,
   },
   brand: {
     fontSize: 29,
     fontWeight: '700',
-    color: '#0B0D12',
+    color: colors.text,
     letterSpacing: -0.4,
   },
   accentLine: {
@@ -394,11 +401,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#0B0D12',
+    color: colors.text,
     letterSpacing: -0.2,
   },
   countBadge: {
-    backgroundColor: '#F0F1F4',
+    backgroundColor: colors.border,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
@@ -406,18 +413,18 @@ const styles = StyleSheet.create({
   countBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#5B5F6B',
+    color: colors.subText,
   },
 
   // Empty state card
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     paddingVertical: 36,
     paddingHorizontal: 24,
     borderRadius: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#F0F1F4',
+    borderColor: colors.border,
     shadowColor: '#0B0D12',
     shadowOpacity: 0.05,
     shadowRadius: 18,
@@ -436,14 +443,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 19,
     fontWeight: '700',
-    color: '#0B0D12',
+    color: colors.text,
   },
   subtitle: {
     fontSize: 14,
     lineHeight: 21,
     textAlign: 'center',
     marginTop: 10,
-    color: '#8A8F98',
+    color: colors.subText,
     maxWidth: 260,
   },
   statusPill: {
@@ -463,12 +470,12 @@ const styles = StyleSheet.create({
 
   // Product cards
   productCard: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     borderRadius: 20,
     padding: 20,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#F0F1F4',
+    borderColor: colors.border,
     shadowColor: '#0B0D12',
     shadowOpacity: 0.04,
     shadowRadius: 14,
@@ -483,18 +490,18 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#0B0D12',
+    color: colors.text,
     flex: 1,
     marginRight: 10,
   },
   model: {
     marginTop: 6,
-    color: '#8A8F98',
+    color: colors.subText,
     fontSize: 13,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: '#EEEFF2',
+    backgroundColor: colors.border,
     marginVertical: 14,
   },
   metaRow: {
@@ -507,7 +514,7 @@ const styles = StyleSheet.create({
   metaLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: colors.subText,
     letterSpacing: 0.3,
     marginBottom: 3,
     textTransform: 'uppercase',
@@ -515,7 +522,7 @@ const styles = StyleSheet.create({
   metaValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2A2D34',
+    color: colors.text,
   },
 
   statusBadge: {
@@ -562,7 +569,7 @@ const styles = StyleSheet.create({
 
   footerHint: {
     textAlign: 'center',
-    color: '#C7C9D1',
+    color: colors.subText,
     fontSize: 12,
     fontWeight: '500',
     marginTop: 20,

@@ -17,6 +17,7 @@ import Feather from 'react-native-vector-icons/Feather';
 
 import { registerProduct } from '../services/ProductApi';
 import { getUserDetails } from '../services/AuthService';
+import { useAppTheme } from '../services/theme';
 
 
 const parseQR = (raw) => {
@@ -69,6 +70,9 @@ const EMPTY_FORM = {
 
 
 const ProductRegistrationScreen = ({ navigation }) => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
+
   // mode: 'scan' | 'manual'
   const [mode, setMode] = useState('scan');
 
@@ -278,7 +282,7 @@ const ProductRegistrationScreen = ({ navigation }) => {
             <Feather
               name="camera"
               size={15}
-              color={mode === 'scan' ? '#0B0D12' : '#9CA3AF'}
+              color={mode === 'scan' ? colors.text : colors.subText}
               style={styles.modeIcon}
             />
 
@@ -303,7 +307,7 @@ const ProductRegistrationScreen = ({ navigation }) => {
             <Feather
               name="edit-3"
               size={15}
-              color={mode === 'manual' ? '#0B0D12' : '#9CA3AF'}
+              color={mode === 'manual' ? colors.text : colors.subText}
               style={styles.modeIcon}
             />
 
@@ -378,7 +382,7 @@ const ProductRegistrationScreen = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="e.g. Smart Router X200"
-                placeholderTextColor="#B4B7C0"
+                placeholderTextColor={colors.subText}
                 value={manualForm['Device Name']}
                 onChangeText={(text) => updateManualField('Device Name', text)}
               />
@@ -389,7 +393,7 @@ const ProductRegistrationScreen = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="e.g. RX-200-IN"
-                placeholderTextColor="#B4B7C0"
+                placeholderTextColor={colors.subText}
                 autoCapitalize="characters"
                 value={manualForm['Model No']}
                 onChangeText={(text) => updateManualField('Model No', text)}
@@ -401,7 +405,7 @@ const ProductRegistrationScreen = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="e.g. SN123456789"
-                placeholderTextColor="#B4B7C0"
+                placeholderTextColor={colors.subText}
                 autoCapitalize="characters"
                 value={manualForm['Serial No']}
                 onChangeText={(text) => updateManualField('Serial No', text)}
@@ -413,7 +417,7 @@ const ProductRegistrationScreen = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="e.g. AA:BB:CC:DD:EE:FF"
-                placeholderTextColor="#B4B7C0"
+                placeholderTextColor={colors.subText}
                 autoCapitalize="characters"
                 value={manualForm['MAC ID']}
                 onChangeText={(text) => updateManualField('MAC ID', text)}
@@ -425,7 +429,7 @@ const ProductRegistrationScreen = ({ navigation }) => {
               <TextInput
                 style={styles.input}
                 placeholder="e.g. ABC Electronics"
-                placeholderTextColor="#B4B7C0"
+                placeholderTextColor={colors.subText}
                 value={manualForm['MDF By']}
                 onChangeText={(text) => updateManualField('MDF By', text)}
               />
@@ -463,27 +467,32 @@ const ProductRegistrationScreen = ({ navigation }) => {
             <Row
               label="Device Name"
               value={product['Device Name']}
+              styles={styles}
             />
 
             <Row
               label="Model No"
               value={product['Model No']}
+              styles={styles}
             />
 
             <Row
               label="Serial No"
               value={product['Serial No']}
+              styles={styles}
             />
 
             <Row
               label="MAC ID"
               value={product['MAC ID']}
+              styles={styles}
             />
 
             <Row
               label="Manufacturer"
               value={product['MDF By']}
               last
+              styles={styles}
             />
 
             {/* Edit / rescan option */}
@@ -529,7 +538,7 @@ const ProductRegistrationScreen = ({ navigation }) => {
                 setShowDatePicker(true);
               }}>
 
-              <Feather name="calendar" size={16} color="#5B5F6B" />
+              <Feather name="calendar" size={16} color={colors.subText} />
 
               <Text style={styles.dateText}>
                 {purchaseDate.toLocaleDateString()}
@@ -563,6 +572,7 @@ const ProductRegistrationScreen = ({ navigation }) => {
             <TextInput
               style={styles.input}
               placeholder="Enter threshold"
+              placeholderTextColor={colors.subText}
               keyboardType="numeric"
               value={thresholdValue}
               onChangeText={setThresholdValue}
@@ -578,7 +588,7 @@ const ProductRegistrationScreen = ({ navigation }) => {
                   {emailEnabled ? "☑" : "☐"}
                 </Text>
 
-                <Text>Email Alert</Text>
+                <Text style={styles.checkboxLabel}>Email Alert</Text>
 
               </TouchableOpacity>
 
@@ -586,6 +596,7 @@ const ProductRegistrationScreen = ({ navigation }) => {
                 <TextInput
                   style={styles.input}
                   placeholder="Enter Email"
+                  placeholderTextColor={colors.subText}
                   keyboardType="email-address"
                   value={alertEmail}
                   onChangeText={setAlertEmail}
@@ -605,7 +616,7 @@ const ProductRegistrationScreen = ({ navigation }) => {
                   {smsEnabled ? "☑" : "☐"}
                 </Text>
 
-                <Text>SMS Alert</Text>
+                <Text style={styles.checkboxLabel}>SMS Alert</Text>
 
               </TouchableOpacity>
 
@@ -614,6 +625,7 @@ const ProductRegistrationScreen = ({ navigation }) => {
                 <TextInput
                   style={styles.input}
                   placeholder="Enter Phone Number"
+                  placeholderTextColor={colors.subText}
                   keyboardType="phone-pad"
                   value={smsPhone}
                   onChangeText={setSmsPhone}
@@ -652,7 +664,7 @@ const ProductRegistrationScreen = ({ navigation }) => {
   );
 };
 
-const Row = ({ label, value, last }) => {
+const Row = ({ label, value, last, styles }) => {
   return (
     <View style={[styles.row, last && { marginBottom: 0 }]}>
 
@@ -670,10 +682,10 @@ const Row = ({ label, value, last }) => {
 
 export default ProductRegistrationScreen;
 
-const styles = StyleSheet.create({
+const createStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FAFAFB',
+    backgroundColor: colors.background,
   },
   scrollContent: {
     paddingHorizontal: 24,
@@ -684,12 +696,12 @@ const styles = StyleSheet.create({
   screenTitle: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#0B0D12',
+    color: colors.text,
     letterSpacing: -0.4,
   },
   screenSubtitle: {
     fontSize: 14,
-    color: '#8A8F98',
+    color: colors.subText,
     marginTop: 6,
     marginBottom: 28,
   },
@@ -697,7 +709,7 @@ const styles = StyleSheet.create({
   // Mode toggle
   modeToggleContainer: {
     flexDirection: 'row',
-    backgroundColor: '#F0F1F4',
+    backgroundColor: colors.border,
     borderRadius: 14,
     padding: 4,
     marginBottom: 28,
@@ -711,7 +723,7 @@ const styles = StyleSheet.create({
     borderRadius: 11,
   },
   modeButtonActive: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     shadowColor: '#0B0D12',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.08,
@@ -724,10 +736,10 @@ const styles = StyleSheet.create({
   modeButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: colors.subText,
   },
   modeButtonTextActive: {
-    color: '#0B0D12',
+    color: colors.text,
   },
 
   // Scanner
@@ -742,7 +754,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: '#0B0D12',
     borderWidth: 1,
-    borderColor: '#F0F1F4',
+    borderColor: colors.border,
   },
   camera: {
     width: '100%',
@@ -794,18 +806,18 @@ const styles = StyleSheet.create({
   scanText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#8A8F98',
+    color: colors.subText,
     marginTop: 16,
   },
 
   // Cards
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     borderRadius: 20,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#F0F1F4',
+    borderColor: colors.border,
     shadowColor: '#0B0D12',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.04,
@@ -821,7 +833,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#0B0D12',
+    color: colors.text,
     marginBottom: 18,
   },
 
@@ -832,20 +844,20 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#5B5F6B',
+    color: colors.subText,
     marginBottom: 8,
     letterSpacing: 0.2,
   },
   input: {
     borderWidth: 1.5,
-    borderColor: '#EEEFF2',
-    backgroundColor: '#FAFAFB',
+    borderColor: colors.border,
+    backgroundColor: colors.background,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 15,
     fontWeight: '500',
-    color: '#0B0D12',
+    color: colors.text,
   },
 
   // Product details rows
@@ -855,18 +867,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#EEEFF2',
+    borderBottomColor: colors.border,
     marginBottom: 2,
   },
   label: {
     fontSize: 14,
     fontWeight: '400',
-    color: '#8A8F98',
+    color: colors.subText,
   },
   value: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0B0D12',
+    color: colors.text,
     maxWidth: '60%',
     textAlign: 'right',
   },
@@ -890,8 +902,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     borderWidth: 1.5,
-    borderColor: '#EEEFF2',
-    backgroundColor: '#FAFAFB',
+    borderColor: colors.border,
+    backgroundColor: colors.background,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
@@ -899,7 +911,7 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#0B0D12',
+    color: colors.text,
   },
 
   // Buttons
@@ -933,6 +945,10 @@ const styles = StyleSheet.create({
   checkbox: {
     fontSize: 22,
     marginRight: 10,
+    color: colors.text,
+  },
+
+  checkboxLabel: {
+    color: colors.text,
   },
 });
-

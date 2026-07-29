@@ -11,22 +11,26 @@ import {
   SafeAreaView,
   Platform,
   Alert,
+  StatusBar,
 } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import { updateProfile } from "../services/AuthService";
 import { getUserDetails } from "../services/AuthService";
+import { useAppTheme } from '../services/theme';
 
 /* -------------------------------------------------------------------------- */
 /*  Reusable Components                                                       */
 /* -------------------------------------------------------------------------- */
 
 const SectionCard = memo(({ title, icon, children, style }) => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   return (
     <View style={[styles.section, style]}>
       {title ? (
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>{title}</Text>
-          {icon ? <Feather name={icon} size={16} color="#9CA3AF" /> : null}
+          {icon ? <Feather name={icon} size={16} color={colors.subText} /> : null}
         </View>
       ) : null}
       <View style={styles.card}>{children}</View>
@@ -48,6 +52,8 @@ const InputField = memo(
     autoCapitalize = 'sentences',
     isLast = false,
   }) => {
+    const { colors } = useAppTheme();
+    const styles = createStyles(colors);
     return (
       <View style={[styles.fieldWrapper, isLast && styles.fieldWrapperLast]}>
         <Text style={styles.fieldLabel}>{label}</Text>
@@ -57,7 +63,7 @@ const InputField = memo(
             value={value}
             onChangeText={onChangeText}
             placeholder={placeholder}
-            placeholderTextColor="#B4B8C2"
+            placeholderTextColor={colors.subText}
             keyboardType={keyboardType}
             autoCapitalize={autoCapitalize}
             secureTextEntry={isPassword && !passwordVisible}
@@ -70,7 +76,7 @@ const InputField = memo(
               <Feather
                 name={passwordVisible ? 'eye-off' : 'eye'}
                 size={18}
-                color="#9CA3AF"
+                color={colors.subText}
               />
             </TouchableOpacity>
           ) : null}
@@ -82,6 +88,8 @@ const InputField = memo(
 );
 
 const ReadOnlyRow = memo(({ label, value, isLast = false }) => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   return (
     <View>
       <View style={styles.dataRow}>
@@ -96,6 +104,8 @@ const ReadOnlyRow = memo(({ label, value, isLast = false }) => {
 });
 
 const NotificationSwitch = memo(({ label, subLabel, value, onValueChange, isLast = false }) => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   return (
     <View>
       <View style={styles.switchRow}>
@@ -117,6 +127,8 @@ const NotificationSwitch = memo(({ label, subLabel, value, onValueChange, isLast
 });
 
 const ActionButton = memo(({ label, onPress, variant = 'primary', icon }) => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const isPrimary = variant === 'primary';
   return (
     <TouchableOpacity
@@ -140,6 +152,8 @@ const ActionButton = memo(({ label, onPress, variant = 'primary', icon }) => {
 });
 
 const ProfileHeader = memo(({ name, email, phone, onChangePicture }) => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const initial = name ? name.charAt(0).toUpperCase() : 'U';
   return (
     <View style={styles.identityCard}>
@@ -178,6 +192,9 @@ const ProfileHeader = memo(({ name, email, phone, onChangePicture }) => {
 /* -------------------------------------------------------------------------- */
 
 const EditProfile = ({ navigation }) => {
+  const { colors, isDark } = useAppTheme();
+  const styles = createStyles(colors);
+
   // Profile fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -338,6 +355,10 @@ const EditProfile = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
       <KeyboardAvoidingView
         style={styles.flexOne}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -357,7 +378,7 @@ const EditProfile = ({ navigation }) => {
               onPress={() => navigation.goBack()}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Feather name="arrow-left" size={20} color="#0B0D12" />
+              <Feather name="arrow-left" size={20} color={colors.text} />
               <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
             <Text style={styles.screenTitle}>Edit Profile</Text>
@@ -446,294 +467,297 @@ export default EditProfile;
 /*  Styles                                                                     */
 /* -------------------------------------------------------------------------- */
 
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#FAFAFB',
-  },
-  flexOne: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#FAFAFB',
-  },
-  contentContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 48,
-  },
+const createStyles = (colors) =>
+  StyleSheet.create({
+    safeArea: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    flexOne: {
+      flex: 1,
+    },
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    contentContainer: {
+      paddingHorizontal: 24,
+      paddingTop: 16,
+      paddingBottom: 48,
+    },
 
-  // Header
-  header: {
-    marginBottom: 24,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    marginBottom: 14,
-  },
-  backButtonText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#0B0D12',
-    marginLeft: 6,
-  },
-  screenTitle: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: '#0B0D12',
-    letterSpacing: -0.6,
-  },
+    // Header
+    header: {
+      marginBottom: 24,
+    },
+    backButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      marginBottom: 14,
+    },
+    backButtonText: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: colors.text,
+      marginLeft: 6,
+    },
+    screenTitle: {
+      fontSize: 30,
+      fontWeight: '800',
+      color: colors.text,
+      letterSpacing: -0.6,
+    },
 
-  // Identity / Profile Card
-  identityCard: {
-    backgroundColor: '#0B0D12',
-    borderRadius: 24,
-    padding: 22,
-    marginBottom: 28,
-    shadowColor: '#0B0D12',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    elevation: 3,
-  },
-  identityTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  identityAvatarWrapper: {
-    position: 'relative',
-    marginRight: 16,
-  },
-  identityAvatar: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  identityAvatarText: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  editAvatarBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#0B0D12',
-  },
-  identityInfo: {
-    flex: 1,
-  },
-  identityName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 3,
-  },
-  identityEmail: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: 'rgba(255,255,255,0.5)',
-    marginBottom: 2,
-  },
-  identityPhone: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: 'rgba(255,255,255,0.5)',
-  },
+    // Identity / Profile Card (intentionally kept as a fixed dark accent
+    // card in both themes to preserve the existing brand look, same as
+    // the Settings screen).
+    identityCard: {
+      backgroundColor: '#0B0D12',
+      borderRadius: 24,
+      padding: 22,
+      marginBottom: 28,
+      shadowColor: '#0B0D12',
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.18,
+      shadowRadius: 24,
+      elevation: 3,
+    },
+    identityTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    identityAvatarWrapper: {
+      position: 'relative',
+      marginRight: 16,
+    },
+    identityAvatar: {
+      width: 68,
+      height: 68,
+      borderRadius: 34,
+      backgroundColor: 'rgba(255,255,255,0.12)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    identityAvatarText: {
+      fontSize: 26,
+      fontWeight: '700',
+      color: '#fff',
+    },
+    editAvatarBadge: {
+      position: 'absolute',
+      bottom: -2,
+      right: -2,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: '#FFFFFF',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 2,
+      borderColor: '#0B0D12',
+    },
+    identityInfo: {
+      flex: 1,
+    },
+    identityName: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: '#fff',
+      marginBottom: 3,
+    },
+    identityEmail: {
+      fontSize: 13,
+      fontWeight: '400',
+      color: 'rgba(255,255,255,0.5)',
+      marginBottom: 2,
+    },
+    identityPhone: {
+      fontSize: 13,
+      fontWeight: '400',
+      color: 'rgba(255,255,255,0.5)',
+    },
 
-  // Sections
-  section: {
-    marginBottom: 28,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0B0D12',
-    letterSpacing: -0.2,
-  },
+    // Sections
+    section: {
+      marginBottom: 28,
+    },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+      paddingHorizontal: 4,
+    },
+    sectionTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.text,
+      letterSpacing: -0.2,
+    },
 
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    paddingVertical: 6,
-    shadowColor: '#0B0D12',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 1,
-    borderWidth: 1,
-    borderColor: '#F0F1F4',
-  },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 20,
+      paddingHorizontal: 18,
+      paddingVertical: 6,
+      shadowColor: '#0B0D12',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.04,
+      shadowRadius: 16,
+      elevation: 1,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
 
-  // Input fields
-  fieldWrapper: {
-    paddingVertical: 14,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#EEEFF2',
-  },
-  fieldWrapperLast: {
-    borderBottomWidth: 0,
-  },
-  fieldLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#9CA3AF',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F7F7F9',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: Platform.OS === 'ios' ? 12 : 6,
-    borderWidth: 1,
-    borderColor: '#F0F1F4',
-  },
-  inputRowError: {
-    borderColor: '#FCA5A5',
-    backgroundColor: '#FEF4F4',
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0B0D12',
-    padding: 0,
-  },
-  errorText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#EF4444',
-    marginTop: 6,
-  },
+    // Input fields
+    fieldWrapper: {
+      paddingVertical: 14,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: colors.border,
+    },
+    fieldWrapperLast: {
+      borderBottomWidth: 0,
+    },
+    fieldLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.subText,
+      marginBottom: 8,
+      textTransform: 'uppercase',
+      letterSpacing: 0.3,
+    },
+    inputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: Platform.OS === 'ios' ? 12 : 6,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    inputRowError: {
+      borderColor: '#FCA5A5',
+      backgroundColor: '#FEF4F4',
+    },
+    textInput: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      padding: 0,
+    },
+    errorText: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: '#EF4444',
+      marginTop: 6,
+    },
 
-  // Read only rows
-  dataRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-  },
-  dataLabel: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: '#8A8F98',
-  },
-  dataValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0B0D12',
-    maxWidth: '60%',
-    textAlign: 'right',
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: '#EEEFF2',
-  },
+    // Read only rows
+    dataRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 16,
+    },
+    dataLabel: {
+      fontSize: 14,
+      fontWeight: '400',
+      color: colors.subText,
+    },
+    dataValue: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      maxWidth: '60%',
+      textAlign: 'right',
+    },
+    divider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.border,
+    },
 
-  // Devices
-  deviceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 18,
-  },
-  deviceLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0B0D12',
-    marginBottom: 3,
-  },
-  deviceSubLabel: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#9CA3AF',
-  },
-  deviceCount: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#0B0D12',
-    letterSpacing: -0.4,
-  },
+    // Devices
+    deviceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 18,
+    },
+    deviceLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 3,
+    },
+    deviceSubLabel: {
+      fontSize: 12,
+      fontWeight: '400',
+      color: colors.subText,
+    },
+    deviceCount: {
+      fontSize: 22,
+      fontWeight: '800',
+      color: colors.text,
+      letterSpacing: -0.4,
+    },
 
-  // Switch rows
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-  },
-  switchTextWrapper: {
-    flex: 1,
-    marginRight: 12,
-  },
+    // Switch rows
+    switchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 16,
+    },
+    switchTextWrapper: {
+      flex: 1,
+      marginRight: 12,
+    },
 
-  // Buttons
-  buttonGroup: {
-    marginTop: 8,
-    gap: 12,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 16,
-  },
-  primaryButton: {
-    backgroundColor: '#4F46E5',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 3,
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  secondaryButton: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  secondaryButtonText: {
-    color: '#4B5563',
-    fontWeight: '700',
-    fontSize: 15,
-  },
+    // Buttons
+    buttonGroup: {
+      marginTop: 8,
+      gap: 12,
+    },
+    actionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 16,
+      borderRadius: 16,
+    },
+    primaryButton: {
+      backgroundColor: '#4F46E5',
+      shadowColor: '#4F46E5',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.25,
+      shadowRadius: 16,
+      elevation: 3,
+    },
+    primaryButtonText: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+      fontSize: 15,
+    },
+    secondaryButton: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    secondaryButtonText: {
+      color: '#4B5563',
+      fontWeight: '700',
+      fontSize: 15,
+    },
 
-  version: {
-    textAlign: 'center',
-    color: '#C7C9D1',
-    fontSize: 12,
-    fontWeight: '500',
-    letterSpacing: 0.2,
-    marginTop: 24,
-  },
-});
+    version: {
+      textAlign: 'center',
+      color: colors.subText,
+      fontSize: 12,
+      fontWeight: '500',
+      letterSpacing: 0.2,
+      marginTop: 24,
+    },
+  });

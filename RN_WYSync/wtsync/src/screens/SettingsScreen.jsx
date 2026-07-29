@@ -8,6 +8,7 @@ import {
   Switch,
   Alert,
   Animated,
+  StatusBar,
 } from 'react-native';
 
 import React, { useEffect, useState, useCallback, useRef } from 'react';
@@ -20,7 +21,12 @@ import { logoutUser } from '../services/AuthService';
 
 import Feather from 'react-native-vector-icons/Feather';
 
+import { useAppTheme } from '../services/theme';
+
 const SettingsScreen = ({ navigation }) => {
+  const { colors, isDark } = useAppTheme();
+  const styles = createStyles(colors);
+
   const [user, setuser] = useState(null);
 
   const [loading, setLoading] = useState(true);
@@ -141,6 +147,11 @@ const SettingsScreen = ({ navigation }) => {
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
+
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerFade }]}>
         <Text style={styles.greeting}>Account</Text>
@@ -174,7 +185,7 @@ const SettingsScreen = ({ navigation }) => {
       <View style={styles.section}>
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Profile</Text>
-          <Feather name="user" size={16} color="#9CA3AF" />
+          <Feather name="user" size={16} color={colors.subText} />
         </View>
 
         <View style={styles.card}>
@@ -218,7 +229,7 @@ const SettingsScreen = ({ navigation }) => {
       <View style={styles.section}>
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Notifications</Text>
-          <Feather name="bell" size={16} color="#9CA3AF" />
+          <Feather name="bell" size={16} color={colors.subText} />
         </View>
 
         <View style={styles.card}>
@@ -253,7 +264,7 @@ const SettingsScreen = ({ navigation }) => {
                   value={smsNumber}
                   onChangeText={setSmsNumber}
                   placeholder="Enter phone number"
-                  placeholderTextColor="#B4B8C2"
+                  placeholderTextColor={colors.subText}
                   keyboardType="phone-pad"
                 />
               </View>
@@ -296,7 +307,7 @@ const SettingsScreen = ({ navigation }) => {
                   value={notificationEmail}
                   onChangeText={setNotificationEmail}
                   placeholder="Enter email address"
-                  placeholderTextColor="#B4B8C2"
+                  placeholderTextColor={colors.subText}
                   keyboardType="email-address"
                   autoCapitalize="none"
                 />
@@ -326,7 +337,7 @@ const SettingsScreen = ({ navigation }) => {
       <View style={styles.section}>
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>My Devices</Text>
-          <Feather name="cpu" size={16} color="#9CA3AF" />
+          <Feather name="cpu" size={16} color={colors.subText} />
         </View>
 
         <View style={styles.card}>
@@ -369,284 +380,287 @@ const SettingsScreen = ({ navigation }) => {
 
 export default SettingsScreen;
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FAFAFB',
-  },
-  contentContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 48,
-  },
+const createStyles = (colors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    contentContainer: {
+      paddingHorizontal: 24,
+      paddingTop: 24,
+      paddingBottom: 48,
+    },
 
-  // Header
-  header: {
-    width: '100%',
-    marginBottom: 32,
-  },
-  greeting: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#9CA3AF',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-    marginBottom: 6,
-  },
-  screenTitle: {
-    fontSize: 34,
-    fontWeight: '800',
-    color: '#0B0D12',
-    letterSpacing: -0.6,
-    width: '100%',
-  },
+    // Header
+    header: {
+      width: '100%',
+      marginBottom: 32,
+    },
+    greeting: {
+      fontSize: 13,
+      fontWeight: '500',
+      color: colors.subText,
+      letterSpacing: 0.4,
+      textTransform: 'uppercase',
+      marginBottom: 6,
+    },
+    screenTitle: {
+      fontSize: 34,
+      fontWeight: '800',
+      color: colors.text,
+      letterSpacing: -0.6,
+      width: '100%',
+    },
 
-  // Identity Card
-  identityCard: {
-    backgroundColor: '#0B0D12',
-    borderRadius: 24,
-    padding: 22,
-    marginBottom: 32,
-    shadowColor: '#0B0D12',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
-    elevation: 3,
-  },
-  identityTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  identityAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 14,
-  },
-  identityAvatarText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
-  },
-  identityInfo: {
-    flex: 1,
-    marginRight: 10,
-  },
-  identityName: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 3,
-  },
-  identityEmail: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: 'rgba(255,255,255,0.5)',
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(52,211,153,0.16)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#34D399',
-    marginRight: 6,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#34D399',
-    letterSpacing: 0.4,
-  },
+    // Identity Card (intentionally kept as a fixed dark accent card
+    // in both themes to preserve the existing brand look — not
+    // remapped to colors.card per "identical in light mode" requirement)
+    identityCard: {
+      backgroundColor: '#0B0D12',
+      borderRadius: 24,
+      padding: 22,
+      marginBottom: 32,
+      shadowColor: '#0B0D12',
+      shadowOffset: { width: 0, height: 12 },
+      shadowOpacity: 0.18,
+      shadowRadius: 24,
+      elevation: 3,
+    },
+    identityTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    identityAvatar: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: 'rgba(255,255,255,0.12)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: 14,
+    },
+    identityAvatarText: {
+      fontSize: 20,
+      fontWeight: '700',
+      color: '#fff',
+    },
+    identityInfo: {
+      flex: 1,
+      marginRight: 10,
+    },
+    identityName: {
+      fontSize: 18,
+      fontWeight: '600',
+      color: '#fff',
+      marginBottom: 3,
+    },
+    identityEmail: {
+      fontSize: 13,
+      fontWeight: '400',
+      color: 'rgba(255,255,255,0.5)',
+    },
+    statusBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: 'rgba(52,211,153,0.16)',
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 20,
+    },
+    statusDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: '#34D399',
+      marginRight: 6,
+    },
+    statusText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: '#34D399',
+      letterSpacing: 0.4,
+    },
 
-  // Sections
-  section: {
-    marginBottom: 28,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#0B0D12',
-    letterSpacing: -0.2,
-  },
+    // Sections
+    section: {
+      marginBottom: 28,
+    },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12,
+      paddingHorizontal: 4,
+    },
+    sectionTitle: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.text,
+      letterSpacing: -0.2,
+    },
 
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    paddingVertical: 6,
-    shadowColor: '#0B0D12',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 1,
-    borderWidth: 1,
-    borderColor: '#F0F1F4',
-  },
+    card: {
+      backgroundColor: colors.card,
+      borderRadius: 20,
+      paddingHorizontal: 18,
+      paddingVertical: 6,
+      shadowColor: '#0B0D12',
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.04,
+      shadowRadius: 16,
+      elevation: 1,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
 
-  dataRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-  },
-  dataLabel: {
-    fontSize: 14,
-    fontWeight: '400',
-    color: '#8A8F98',
-  },
-  dataValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0B0D12',
-    maxWidth: '60%',
-    textAlign: 'right',
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: '#EEEFF2',
-  },
+    dataRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 16,
+    },
+    dataLabel: {
+      fontSize: 14,
+      fontWeight: '400',
+      color: colors.subText,
+    },
+    dataValue: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      maxWidth: '60%',
+      textAlign: 'right',
+    },
+    divider: {
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: colors.border,
+    },
 
-  editButton: {
-    marginTop: 10,
-    marginBottom: 16,
-    backgroundColor: '#F4F4FE',
-    borderRadius: 14,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  editButtonText: {
-    color: '#4F46E5',
-    fontWeight: '700',
-    fontSize: 14,
-  },
+    editButton: {
+      marginTop: 10,
+      marginBottom: 16,
+      backgroundColor: '#F4F4FE',
+      borderRadius: 14,
+      paddingVertical: 14,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+    },
+    editButtonText: {
+      color: '#4F46E5',
+      fontWeight: '700',
+      fontSize: 14,
+    },
 
-  // Notification switches
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 16,
-  },
-  switchTextWrapper: {
-    flex: 1,
-    marginRight: 12,
-  },
+    // Notification switches
+    switchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 16,
+    },
+    switchTextWrapper: {
+      flex: 1,
+      marginRight: 12,
+    },
 
-  // Notification destination fields
-  fieldWrapper: {
-    paddingBottom: 16,
-  },
-  fieldWrapperLast: {
-    paddingBottom: 6,
-  },
-  fieldLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#9CA3AF',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F7F7F9',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#F0F1F4',
-  },
-  inputRowError: {
-    borderColor: '#FCA5A5',
-    backgroundColor: '#FEF4F4',
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0B0D12',
-    padding: 0,
-  },
-  errorText: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#EF4444',
-    marginTop: 6,
-  },
+    // Notification destination fields
+    fieldWrapper: {
+      paddingBottom: 16,
+    },
+    fieldWrapperLast: {
+      paddingBottom: 6,
+    },
+    fieldLabel: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.subText,
+      marginBottom: 8,
+      textTransform: 'uppercase',
+      letterSpacing: 0.3,
+    },
+    inputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    inputRowError: {
+      borderColor: '#FCA5A5',
+      backgroundColor: '#FEF4F4',
+    },
+    textInput: {
+      flex: 1,
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      padding: 0,
+    },
+    errorText: {
+      fontSize: 12,
+      fontWeight: '500',
+      color: '#EF4444',
+      marginTop: 6,
+    },
 
-  // Devices
-  deviceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 18,
-  },
-  deviceLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0B0D12',
-    marginBottom: 3,
-  },
-  deviceSubLabel: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#9CA3AF',
-  },
-  deviceCount: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#0B0D12',
-    letterSpacing: -0.4,
-  },
+    // Devices
+    deviceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 18,
+    },
+    deviceLabel: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.text,
+      marginBottom: 3,
+    },
+    deviceSubLabel: {
+      fontSize: 12,
+      fontWeight: '400',
+      color: colors.subText,
+    },
+    deviceCount: {
+      fontSize: 22,
+      fontWeight: '800',
+      color: colors.text,
+      letterSpacing: -0.4,
+    },
 
-  // Logout
-  logoutButton: {
-    marginTop: 8,
-    marginBottom: 24,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#FCE4E4',
-    paddingVertical: 16,
-    borderRadius: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoutIcon: {
-    marginRight: 8,
-  },
-  logoutText: {
-    color: '#EF4444',
-    fontWeight: '700',
-    fontSize: 15,
-  },  
+    // Logout
+    logoutButton: {
+      marginTop: 8,
+      marginBottom: 24,
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: '#FCE4E4',
+      paddingVertical: 16,
+      borderRadius: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    logoutIcon: {
+      marginRight: 8,
+    },
+    logoutText: {
+      color: '#EF4444',
+      fontWeight: '700',
+      fontSize: 15,
+    },
 
-  version: {
-    textAlign: 'center',
-    color: '#C7C9D1',
-    fontSize: 12,
-    fontWeight: '500',
-    letterSpacing: 0.2,
-  },
-});
+    version: {
+      textAlign: 'center',
+      color: colors.subText,
+      fontSize: 12,
+      fontWeight: '500',
+      letterSpacing: 0.2,
+    },
+  });

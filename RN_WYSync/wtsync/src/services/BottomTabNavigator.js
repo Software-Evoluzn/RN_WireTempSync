@@ -5,15 +5,19 @@ import Feather from 'react-native-vector-icons/Feather';
 import HomeScreen from '../screens/HomeScreen'
 import ProductRegistrationScreen from '../screens/ProductRegistrationScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import { useAppTheme } from '../services/theme';
+
 const Tab = createBottomTabNavigator();
 
 export default function BottomNavigator() {
+  const { colors } = useAppTheme();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: '#0B0D12',
-        tabBarInactiveTintColor: '#B4B7C0',
+        tabBarActiveTintColor: colors.text,
+        tabBarInactiveTintColor: colors.subText,
         tabBarLabelStyle: {
           fontSize: 11,
           fontWeight: '600',
@@ -28,8 +32,8 @@ export default function BottomNavigator() {
           height: 72,
           paddingTop: 10,
           borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: '#F0F1F4',
-          backgroundColor: '#fff',
+          borderTopColor: colors.border,
+          backgroundColor: colors.card,
           shadowColor: '#0B0D12',
           shadowOffset: { width: 0, height: -4 },
           shadowOpacity: 0.03,

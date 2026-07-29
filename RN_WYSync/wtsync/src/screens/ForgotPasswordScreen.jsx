@@ -14,8 +14,12 @@ import {
 import Feather from 'react-native-vector-icons/Feather';
 
 import { forgotPassword } from '../services/AuthService';
+import { useAppTheme } from '../services/theme';
 
 const ForgotPasswordScreen = ({ navigation }) => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
+
   const [email, setEmail] = useState('');
   const [focused, setFocused] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -50,7 +54,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
           onPress={() => navigation.goBack()}
           style={styles.backButton}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Feather name="arrow-left" size={18} color="#0B0D12" />
+          <Feather name="arrow-left" size={18} color={colors.text} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
 
@@ -68,7 +72,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
             <Text style={styles.label}>Email</Text>
             <TextInput
               placeholder="you@example.com"
-              placeholderTextColor="#B4B7C0"
+              placeholderTextColor={colors.subText}
               value={email}
               onChangeText={setEmail}
               style={[styles.input, focused && styles.inputFocused]}
@@ -98,8 +102,8 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
 export default ForgotPasswordScreen;
 
-const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#FAFAFB' },
+const createStyles = (colors) => StyleSheet.create({
+  flex: { flex: 1, backgroundColor: colors.background },
   container: {
     flexGrow: 1,
     justifyContent: 'center',
@@ -113,7 +117,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
   },
-  backText: { color: '#0B0D12', fontSize: 14, fontWeight: '600' },
+  backText: { color: colors.text, fontSize: 14, fontWeight: '600' },
   iconCircle: {
     width: 72,
     height: 72,
@@ -127,13 +131,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#0B0D12',
+    color: colors.text,
     textAlign: 'center',
     letterSpacing: -0.4,
   },
   subtitle: {
     fontSize: 14,
-    color: '#8A8F98',
+    color: colors.subText,
     textAlign: 'center',
     marginTop: 10,
     marginBottom: 32,
@@ -141,11 +145,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   form: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.card,
     borderRadius: 22,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#F0F1F4',
+    borderColor: colors.border,
     shadowColor: '#0B0D12',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.04,
@@ -158,22 +162,22 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#5B5F6B',
+    color: colors.subText,
     marginBottom: 8,
     letterSpacing: 0.2,
   },
   input: {
     borderWidth: 1.5,
-    borderColor: '#EEEFF2',
-    backgroundColor: '#FAFAFB',
+    borderColor: colors.border,
+    backgroundColor: colors.background,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
     fontSize: 15,
     fontWeight: '500',
-    color: '#0B0D12',
+    color: colors.text,
   },
-  inputFocused: { borderColor: '#4F46E5', backgroundColor: '#fff' },
+  inputFocused: { borderColor: '#4F46E5', backgroundColor: colors.card },
   button: {
     backgroundColor: '#0B0D12',
     paddingVertical: 16,

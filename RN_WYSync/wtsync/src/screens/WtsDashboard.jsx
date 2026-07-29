@@ -47,6 +47,7 @@ import {
   Animated,
   Platform,
   PanResponder,
+  StatusBar,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import Svg, { Line as SvgLine, Path, Text as SvgText, Circle } from 'react-native-svg';
@@ -56,8 +57,7 @@ import auth from '@react-native-firebase/auth';
 
 import { verifyDeviceWifi } from '../services/WifiService';
 import { resetDeviceRemote } from './DeviceConfig';
-
-
+import { useAppTheme } from '../services/theme';
 
 // -------------------------------------------------------------------------
 // BACKEND CONFIG
@@ -67,22 +67,19 @@ const BACKEND_URL = 'http://192.168.1.42:5006';
 // -------------------------------------------------------------------------
 // COLOR CONSTANTS  (matches web dashboard color rules)
 // -------------------------------------------------------------------------
+// NOTE: background / card / border / subText / headerText / tempValue have
+// been moved to theme.js (accessed via useAppTheme()) since they switch
+// between light and dark mode. Everything left here is a fixed brand /
+// status accent color that stays the same in both themes.
 const COLORS = {
-  background: '#F5F7FB',
-  card: '#FFFFFF',
-  border: '#E7EAF3',
   online: '#10B981',
   offline: '#EF4444',
-  tempValue: '#1B2A4A', // dark blue for temperature values
-  headerText: '#1B2A4A',
-  subText: '#8A93A6',
   R: '#DC2626', // Red
   Y: '#D97706', // Yellow / amber
   B: '#2563EB', // Blue
   N: '#6B7280', // Gray
   shadow: '#000000',
   now: '#F43F5E',
-  grid: '#EDF0F7',
   live: '#10B981',
   disabledDay: '#C7CCDA',
 };
@@ -106,7 +103,7 @@ const getPhaseColor = (phaseCode) => {
     case 'N':
       return COLORS.N;
     default:
-      return COLORS.tempValue;
+      return COLORS.N;
   }
 };
 
@@ -245,6 +242,8 @@ const mergeDbRowsWithExisting = (existingEntry, rows, dateKey) => {
 // StatusBadge — small colored dot + label ("Online" / "Offline")
 // -------------------------------------------------------------------------
 const StatusBadge = memo(({ status }) => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const isOnline = status === 'Online';
   return (
     <View style={styles.statusRow}>
@@ -270,6 +269,8 @@ const StatusBadge = memo(({ status }) => {
 // TemperatureCard — single phase reading (R1 / 31.10°C / Min / Max)
 // -------------------------------------------------------------------------
 const TemperatureCard = memo(({ temperature }) => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const { phase, current, min, max } = temperature;
   const phaseColor = useMemo(() => getPhaseColor(phase), [phase]);
 
@@ -295,6 +296,9 @@ const TemperatureCard = memo(({ temperature }) => {
 // PanelCard — Custom Panel Name header + wrapped grid of TemperatureCards
 // -------------------------------------------------------------------------
 const PanelCard = memo(({ panel, onEditPress }) => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
+
   const handleEdit = useCallback(() => {
     onEditPress && onEditPress(panel.panel_no);
   }, [onEditPress, panel.panel_no]);
@@ -321,7 +325,7 @@ const PanelCard = memo(({ panel, onEditPress }) => {
           onPress={handleEdit}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Icon name="edit" size={16} color={COLORS.subText} />
+          <Icon name="edit" size={16} color={colors.subText} />
         </TouchableOpacity>
       </View>
 
@@ -337,18 +341,24 @@ const PanelCard = memo(({ panel, onEditPress }) => {
 // -------------------------------------------------------------------------
 // EmptyPanel — shown when a device is offline / has no panel data
 // -------------------------------------------------------------------------
-const EmptyPanel = memo(() => (
-  <View style={styles.emptyPanelWrap}>
-    <Icon name="power-off" size={34} color={COLORS.subText} />
-    <Text style={styles.emptyPanelText}>No panel data available</Text>
-  </View>
-));
+const EmptyPanel = memo(() => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
+  return (
+    <View style={styles.emptyPanelWrap}>
+      <Icon name="power-off" size={34} color={colors.subText} />
+      <Text style={styles.emptyPanelText}>No panel data available</Text>
+    </View>
+  );
+});
 
 // -------------------------------------------------------------------------
 // PanelSelector — simple custom dropdown ("All Panels" / "Panel 1" ...)
 // This is the "Control Panel filter" for the graph.
 // -------------------------------------------------------------------------
 const PanelSelector = memo(({ options, selected, onSelect }) => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const [visible, setVisible] = useState(false);
 
   const openMenu = useCallback(() => setVisible(true), []);
@@ -366,7 +376,7 @@ const PanelSelector = memo(({ options, selected, onSelect }) => {
     <View>
       <TouchableOpacity style={styles.dropdownButton} onPress={openMenu}>
         <Text style={styles.dropdownButtonText}>{selected}</Text>
-        <Icon name="arrow-drop-down" size={20} color={COLORS.headerText} />
+        <Icon name="arrow-drop-down" size={20} color={colors.text} />
       </TouchableOpacity>
 
       <Modal
@@ -408,6 +418,8 @@ const PanelSelector = memo(({ options, selected, onSelect }) => {
 // CalendarModal — month-grid date picker (the "calendar dropdown")
 // -------------------------------------------------------------------------
 const CalendarModal = memo(({ visible, selectedDate, onSelect, onClose }) => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const [viewMonth, setViewMonth] = useState(
     () => new Date(selectedDate.getFullYear(), selectedDate.getMonth(), 1)
   );
@@ -462,7 +474,7 @@ const CalendarModal = memo(({ visible, selectedDate, onSelect, onClose }) => {
               onPress={goPrevMonth}
               hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
-              <Icon name="chevron-left" size={20} color={COLORS.headerText} />
+              <Icon name="chevron-left" size={20} color={colors.text} />
             </TouchableOpacity>
 
             <Text style={styles.calendarMonthText}>
@@ -481,7 +493,7 @@ const CalendarModal = memo(({ visible, selectedDate, onSelect, onClose }) => {
               <Icon
                 name="chevron-right"
                 size={20}
-                color={isViewingCurrentMonth ? COLORS.disabledDay : COLORS.headerText}
+                color={isViewingCurrentMonth ? COLORS.disabledDay : colors.text}
               />
             </TouchableOpacity>
           </View>
@@ -547,6 +559,8 @@ const CalendarModal = memo(({ visible, selectedDate, onSelect, onClose }) => {
 // CalendarModal ("calendar dropdown") on press.
 // -------------------------------------------------------------------------
 const DateField = memo(({ selectedDate, isToday, onChangeDate }) => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const [calendarVisible, setCalendarVisible] = useState(false);
 
   const openCalendar = useCallback(() => setCalendarVisible(true), []);
@@ -563,9 +577,9 @@ const DateField = memo(({ selectedDate, isToday, onChangeDate }) => {
   return (
     <View style={styles.dateFieldRow}>
       <TouchableOpacity style={styles.dateFieldBtn} onPress={openCalendar}>
-        <Icon name="calendar-today" size={14} color={COLORS.headerText} />
+        <Icon name="calendar-today" size={14} color={colors.text} />
         <Text style={styles.dateFieldText}>{formatDateLabel(selectedDate)}</Text>
-        <Icon name="arrow-drop-down" size={18} color={COLORS.headerText} />
+        <Icon name="arrow-drop-down" size={18} color={colors.text} />
       </TouchableOpacity>
 
       {isToday && (
@@ -630,6 +644,8 @@ const clampView = (start, end) => {
  * seriesMap: { [phaseCode]: [{ t: minutesSinceMidnight, v: number }, ...] }
  */
 const RealtimeChart = memo(({ seriesMap, nowMinutes, loading }) => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const [view, setView] = useState({ start: 0, end: DAY_MINUTES });
   const viewRef = useRef(view);
   const gestureRef = useRef(null);
@@ -792,14 +808,14 @@ const RealtimeChart = memo(({ seriesMap, nowMinutes, loading }) => {
                 y1={yScale(val)}
                 x2={CHART_WIDTH - CHART_PAD.right}
                 y2={yScale(val)}
-                stroke={COLORS.grid}
+                stroke={colors.border}
                 strokeWidth={1}
               />
               <SvgText
                 x={CHART_PAD.left - 6}
                 y={yScale(val) + 3}
                 fontSize={9}
-                fill={COLORS.subText}
+                fill={colors.subText}
                 textAnchor="end"
               >
                 {val.toFixed(0)}
@@ -815,14 +831,14 @@ const RealtimeChart = memo(({ seriesMap, nowMinutes, loading }) => {
                 y1={CHART_PAD.top}
                 x2={xScale(t)}
                 y2={CHART_HEIGHT - CHART_PAD.bottom}
-                stroke={COLORS.grid}
+                stroke={colors.border}
                 strokeWidth={1}
               />
               <SvgText
                 x={xScale(t)}
                 y={CHART_HEIGHT - CHART_PAD.bottom + 14}
                 fontSize={9}
-                fill={COLORS.subText}
+                fill={colors.subText}
                 textAnchor="middle"
               >
                 {formatMinutes(t)}
@@ -891,7 +907,7 @@ const RealtimeChart = memo(({ seriesMap, nowMinutes, loading }) => {
             x={CHART_WIDTH - CHART_PAD.right}
             y={CHART_PAD.top - 2}
             fontSize={9}
-            fill={COLORS.subText}
+            fill={colors.subText}
             textAnchor="end"
           >
             {`${formatMinutes(view.start)} - ${formatMinutes(view.end)}`}
@@ -945,6 +961,8 @@ const TemperatureGraph = memo(
     panelOptions,
     onLayout,
   }) => {
+    const { colors } = useAppTheme();
+    const styles = createStyles(colors);
     const [selectedPanel, setSelectedPanel] = useState('All Panels');
     const [selectedDate, setSelectedDate] = useState(() => new Date());
     const [historyLoading, setHistoryLoading] = useState(false);
@@ -982,10 +1000,10 @@ const TemperatureGraph = memo(
         selectedPanel === 'All Panels'
           ? device.panels
           : device.panels.filter(
-            (panel) =>
-              (panel.custom_name || `Panel ${panel.panel_no}`) ===
-              selectedPanel
-          );
+              (panel) =>
+                (panel.custom_name || `Panel ${panel.panel_no}`) ===
+                selectedPanel
+            );
 
       const includedPhases = new Set();
       panelsToInclude.forEach((panel) => {
@@ -1043,6 +1061,8 @@ const DeviceCard = memo(
     historyVersion,
     onRequestHistory,
   }) => {
+    const { colors } = useAppTheme();
+    const styles = createStyles(colors);
     const isOnline = device.status === 'Online';
     const fadeAnim = useState(new Animated.Value(0))[0];
 
@@ -1102,7 +1122,7 @@ const DeviceCard = memo(
               style={styles.iconCircle}
               onPress={handleChartPress}
             >
-              <Icon name="show-chart" size={16} color={COLORS.subText} />
+              <Icon name="show-chart" size={16} color={colors.subText} />
             </TouchableOpacity>
           </View>
         </View>
@@ -1148,6 +1168,8 @@ const HEADER_MENU_OPTIONS = [
 ];
 
 const HeaderMenu = memo(({ onSelect }) => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
   const anchorRef = useRef(null);
   const [visible, setVisible] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ top: 0, right: 0 });
@@ -1183,7 +1205,7 @@ const HeaderMenu = memo(({ onSelect }) => {
         onPress={openMenu}
         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       >
-        <Icon name="more-vert" size={22} color={COLORS.headerText} />
+        <Icon name="more-vert" size={22} color={colors.text} />
       </TouchableOpacity>
 
       <Modal
@@ -1223,6 +1245,8 @@ const HeaderMenu = memo(({ onSelect }) => {
 // MAIN SCREEN — WtsDashboard
 // -------------------------------------------------------------------------
 const WtsDashboard = () => {
+  const { colors, isDark } = useAppTheme();
+  const styles = createStyles(colors);
   const navigation = useNavigation();
   const route = useRoute();
   const selectedProduct = route.params?.product;
@@ -1454,7 +1478,6 @@ const WtsDashboard = () => {
     console.log(`Edit requested: device=${serialNo} panel=${panelNo}`);
   }, []);
 
-
   const handleMenuSelect = useCallback(async (option) => {
 
     if (!selectedProduct) return;
@@ -1539,7 +1562,7 @@ const WtsDashboard = () => {
         animated: true,
       });
     },
-    [filteredDevices]
+    [filteredDevices, styles]
   );
 
   const handleScrollToIndexFailed = useCallback((info) => {
@@ -1579,6 +1602,10 @@ const WtsDashboard = () => {
   if (loading && devices.length === 0) {
     return (
       <View style={styles.loaderWrap}>
+        <StatusBar
+          barStyle={isDark ? 'light-content' : 'dark-content'}
+          backgroundColor={colors.background}
+        />
         <ActivityIndicator size="large" color={COLORS.B} />
       </View>
     );
@@ -1589,13 +1616,18 @@ const WtsDashboard = () => {
 
   return (
     <View style={styles.screen}>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
+
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.headerIconButton}
           onPress={handleBackPress}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Icon name="arrow-back" size={22} color={COLORS.headerText} />
+          <Icon name="arrow-back" size={22} color={colors.text} />
         </TouchableOpacity>
 
         <View style={styles.headerTitleWrap}>
@@ -1607,7 +1639,7 @@ const WtsDashboard = () => {
 
       {deviceNotFound ? (
         <View style={styles.loaderWrap}>
-          <Icon name="error-outline" size={34} color={COLORS.subText} />
+          <Icon name="error-outline" size={34} color={colors.subText} />
           <Text style={styles.emptyPanelText}>Device Not Found</Text>
         </View>
       ) : (
@@ -1650,419 +1682,420 @@ const cardShadow = Platform.select({
 
 const CALENDAR_CELL_SIZE = 36;
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loaderWrap: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    backgroundColor: COLORS.card,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  headerIconButton: {
-    width: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitleWrap: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.headerText,
-  },
-  listContent: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  deviceCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 14,
-    padding: 16,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    ...cardShadow,
-  },
-  deviceHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  deviceHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-  },
-  deviceName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.headerText,
-    marginRight: 10,
-  },
-  deviceHeaderIcons: {
-    flexDirection: 'row',
-  },
-  iconCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 5,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  panelsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -6,
-  },
-  panelCard: {
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    padding: 12,
-    margin: 6,
-    minWidth: 260,
-    flexGrow: 1,
-    flexBasis: '45%',
-  },
-  panelHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  panelTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.headerText,
-  },
-  tempGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginHorizontal: -4,
-  },
-  tempCard: {
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    margin: 4,
-    minWidth: 110,
-    flexGrow: 1,
-  },
-  tempPhase: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  tempValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.tempValue,
-    marginBottom: 6,
-  },
-  tempMinMaxRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  tempMinMax: {
-    fontSize: 10,
-    color: COLORS.subText,
-  },
-  emptyPanelWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
-  emptyPanelText: {
-    marginTop: 10,
-    fontSize: 13,
-    color: COLORS.subText,
-  },
-  graphWrap: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  graphHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  graphTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.headerText,
-  },
+const createStyles = (colors) =>
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    loaderWrap: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+    },
+    header: {
+      backgroundColor: colors.card,
+      paddingVertical: 16,
+      paddingHorizontal: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    headerIconButton: {
+      width: 32,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    headerTitleWrap: {
+      flex: 1,
+      alignItems: 'center',
+    },
+    headerTitle: {
+      fontSize: 18,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    listContent: {
+      padding: 16,
+      paddingBottom: 32,
+    },
+    deviceCard: {
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      padding: 16,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      ...cardShadow,
+    },
+    deviceHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    deviceHeaderLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flexShrink: 1,
+    },
+    deviceName: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.text,
+      marginRight: 10,
+    },
+    deviceHeaderIcons: {
+      flexDirection: 'row',
+    },
+    iconCircle: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginLeft: 8,
+    },
+    statusRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    statusDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      marginRight: 5,
+    },
+    statusText: {
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    panelsWrap: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginHorizontal: -6,
+    },
+    panelCard: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      padding: 12,
+      margin: 6,
+      minWidth: 260,
+      flexGrow: 1,
+      flexBasis: '45%',
+    },
+    panelHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    panelTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    tempGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginHorizontal: -4,
+    },
+    tempCard: {
+      backgroundColor: colors.card,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingVertical: 10,
+      paddingHorizontal: 10,
+      margin: 4,
+      minWidth: 110,
+      flexGrow: 1,
+    },
+    tempPhase: {
+      fontSize: 12,
+      fontWeight: '700',
+      marginBottom: 4,
+    },
+    tempValue: {
+      fontSize: 16,
+      fontWeight: '700',
+      color: colors.text,
+      marginBottom: 6,
+    },
+    tempMinMaxRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    tempMinMax: {
+      fontSize: 10,
+      color: colors.subText,
+    },
+    emptyPanelWrap: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 40,
+    },
+    emptyPanelText: {
+      marginTop: 10,
+      fontSize: 13,
+      color: colors.subText,
+    },
+    graphWrap: {
+      marginTop: 16,
+      paddingTop: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    graphHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    graphTitle: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.text,
+    },
 
-  // Date field (opens calendar modal)
-  dateFieldRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  dateFieldBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    backgroundColor: COLORS.card,
-  },
-  dateFieldText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.headerText,
-    marginHorizontal: 6,
-  },
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 8,
-    backgroundColor: '#ECFDF5',
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.live,
-    marginRight: 4,
-  },
-  liveBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: COLORS.live,
-  },
+    // Date field (opens calendar modal)
+    dateFieldRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 10,
+    },
+    dateFieldBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      backgroundColor: colors.card,
+    },
+    dateFieldText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: colors.text,
+      marginHorizontal: 6,
+    },
+    liveBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginLeft: 8,
+      paddingVertical: 4,
+      paddingHorizontal: 8,
+      borderRadius: 8,
+      backgroundColor: '#ECFDF5',
+    },
+    liveDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      backgroundColor: COLORS.live,
+      marginRight: 4,
+    },
+    liveBadgeText: {
+      fontSize: 10,
+      fontWeight: '700',
+      color: COLORS.live,
+    },
 
-  // Calendar modal
-  calendarCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 14,
-    padding: 16,
-    width: CALENDAR_CELL_SIZE * 7 + 32,
-    ...cardShadow,
-  },
-  calendarHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  calendarNavBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  calendarNavBtnDisabled: {
-    opacity: 0.4,
-  },
-  calendarMonthText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: COLORS.headerText,
-  },
-  calendarWeekdayRow: {
-    flexDirection: 'row',
-  },
-  calendarWeekdayCell: {
-    width: CALENDAR_CELL_SIZE,
-    alignItems: 'center',
-    paddingBottom: 6,
-  },
-  calendarWeekdayText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: COLORS.subText,
-  },
-  calendarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  calendarDayCell: {
-    width: CALENDAR_CELL_SIZE,
-    height: CALENDAR_CELL_SIZE,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  calendarDayInner: {
-    width: CALENDAR_CELL_SIZE - 6,
-    height: CALENDAR_CELL_SIZE - 6,
-    borderRadius: (CALENDAR_CELL_SIZE - 6) / 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  calendarDaySelected: {
-    backgroundColor: COLORS.B,
-  },
-  calendarDayToday: {
-    borderWidth: 1,
-    borderColor: COLORS.B,
-  },
-  calendarDayText: {
-    fontSize: 13,
-    color: COLORS.headerText,
-  },
-  calendarDayTextDisabled: {
-    color: COLORS.disabledDay,
-  },
-  calendarDayTextSelected: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  calendarTodayLink: {
-    marginTop: 10,
-    alignItems: 'center',
-    paddingVertical: 6,
-  },
-  calendarTodayLinkText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: COLORS.B,
-  },
+    // Calendar modal
+    calendarCard: {
+      backgroundColor: colors.card,
+      borderRadius: 14,
+      padding: 16,
+      width: CALENDAR_CELL_SIZE * 7 + 32,
+      ...cardShadow,
+    },
+    calendarHeaderRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 12,
+    },
+    calendarNavBtn: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    calendarNavBtnDisabled: {
+      opacity: 0.4,
+    },
+    calendarMonthText: {
+      fontSize: 14,
+      fontWeight: '700',
+      color: colors.text,
+    },
+    calendarWeekdayRow: {
+      flexDirection: 'row',
+    },
+    calendarWeekdayCell: {
+      width: CALENDAR_CELL_SIZE,
+      alignItems: 'center',
+      paddingBottom: 6,
+    },
+    calendarWeekdayText: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: colors.subText,
+    },
+    calendarGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+    },
+    calendarDayCell: {
+      width: CALENDAR_CELL_SIZE,
+      height: CALENDAR_CELL_SIZE,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    calendarDayInner: {
+      width: CALENDAR_CELL_SIZE - 6,
+      height: CALENDAR_CELL_SIZE - 6,
+      borderRadius: (CALENDAR_CELL_SIZE - 6) / 2,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    calendarDaySelected: {
+      backgroundColor: COLORS.B,
+    },
+    calendarDayToday: {
+      borderWidth: 1,
+      borderColor: COLORS.B,
+    },
+    calendarDayText: {
+      fontSize: 13,
+      color: colors.text,
+    },
+    calendarDayTextDisabled: {
+      color: COLORS.disabledDay,
+    },
+    calendarDayTextSelected: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+    },
+    calendarTodayLink: {
+      marginTop: 10,
+      alignItems: 'center',
+      paddingVertical: 6,
+    },
+    calendarTodayLinkText: {
+      fontSize: 12,
+      fontWeight: '700',
+      color: COLORS.B,
+    },
 
-  chartTouchArea: {
-    width: CHART_WIDTH,
-    height: CHART_HEIGHT,
-  },
-  chartEmptyOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  chartHintRow: {
-    marginTop: 4,
-  },
-  chartHintText: {
-    fontSize: 10,
-    color: COLORS.subText,
-    fontStyle: 'italic',
-  },
-  legendRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 8,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 12,
-    marginBottom: 4,
-  },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 4,
-  },
-  legendText: {
-    fontSize: 11,
-    color: COLORS.headerText,
-    fontWeight: '600',
-  },
-  dropdownButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    backgroundColor: COLORS.card,
-  },
-  dropdownButtonText: {
-    fontSize: 12,
-    color: COLORS.headerText,
-    marginRight: 4,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dropdownMenu: {
-    backgroundColor: COLORS.card,
-    borderRadius: 10,
-    paddingVertical: 6,
-    minWidth: 160,
-    ...cardShadow,
-  },
-  dropdownItem: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  dropdownItemText: {
-    fontSize: 13,
-    color: COLORS.headerText,
-  },
-  dropdownItemTextActive: {
-    color: COLORS.B,
-    fontWeight: '700',
-  },
-  headerMenuOverlay: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  headerMenuList: {
-    position: 'absolute',
-    backgroundColor: COLORS.card,
-    borderRadius: 10,
-    paddingVertical: 6,
-    minWidth: 170,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    ...cardShadow,
-  },
-});
+    chartTouchArea: {
+      width: CHART_WIDTH,
+      height: CHART_HEIGHT,
+    },
+    chartEmptyOverlay: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    chartHintRow: {
+      marginTop: 4,
+    },
+    chartHintText: {
+      fontSize: 10,
+      color: colors.subText,
+      fontStyle: 'italic',
+    },
+    legendRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      marginTop: 8,
+    },
+    legendItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginRight: 12,
+      marginBottom: 4,
+    },
+    legendDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+      marginRight: 4,
+    },
+    legendText: {
+      fontSize: 11,
+      color: colors.text,
+      fontWeight: '600',
+    },
+    dropdownButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      paddingVertical: 6,
+      paddingHorizontal: 10,
+      backgroundColor: colors.card,
+    },
+    dropdownButtonText: {
+      fontSize: 12,
+      color: colors.text,
+      marginRight: 4,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.15)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    dropdownMenu: {
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      paddingVertical: 6,
+      minWidth: 160,
+      ...cardShadow,
+    },
+    dropdownItem: {
+      paddingVertical: 10,
+      paddingHorizontal: 16,
+    },
+    dropdownItemText: {
+      fontSize: 13,
+      color: colors.text,
+    },
+    dropdownItemTextActive: {
+      color: COLORS.B,
+      fontWeight: '700',
+    },
+    headerMenuOverlay: {
+      flex: 1,
+      backgroundColor: 'transparent',
+    },
+    headerMenuList: {
+      position: 'absolute',
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      paddingVertical: 6,
+      minWidth: 170,
+      borderWidth: 1,
+      borderColor: colors.border,
+      ...cardShadow,
+    },
+  });
 
 export default WtsDashboard;
