@@ -33,3 +33,8 @@ class RegisterProduct(db.Model):
     sms_enabled = db.Column(db.Boolean,default= False)
     sms_phone=db.Column(db.String(20),nullable=True)
     
+     # Tracks whether an alert is currently "open" for this device.
+        # True  -> threshold already breached, alert already sent, stay silent
+        # False -> value is back in range, next breach will fire a new alert
+    alert_active = db.Column(db.Boolean, default=False)
+    
