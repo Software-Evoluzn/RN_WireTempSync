@@ -18,7 +18,7 @@ def process_and_save_mqtt_data(serial, raw_payload):
     
     if product:
         product.online_status = True
-        product.last_seen = datetime.utcnow()
+        product.last_seen = datetime.now()
     else:
         # FIXED: Added a pass statement to prevent the IndentationError/SyntaxError
         pass
@@ -64,7 +64,7 @@ def process_and_save_mqtt_data(serial, raw_payload):
                         and val > product.threshold_value
                     ]
 
-                    now = datetime.utcnow()
+                    now = datetime.now()
 
                     if exceeded_phases:
                         if not product.alert_active:

@@ -32,7 +32,7 @@ def check_inactive_devices():
     with flask_app.app_context():
         try:
             # ✅ STRICT LOCAL TIME MATCHING DATABASE TIMESTAMPS
-            timeout_threshold = datetime.now() - timedelta(minutes=3)
+            timeout_threshold = datetime.now() - timedelta(seconds=150)
 
             # Query active devices (1) that haven't updated last_seen in > 3 minutes
             updated_count = (

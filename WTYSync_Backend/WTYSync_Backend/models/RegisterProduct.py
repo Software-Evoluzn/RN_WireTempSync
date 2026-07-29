@@ -38,3 +38,6 @@ class RegisterProduct(db.Model):
         # False -> value is back in range, next breach will fire a new alert
     alert_active = db.Column(db.Boolean, default=False)
     
+    #new column
+    access_point = db.Column(db.String(100),nullable=False)
+    

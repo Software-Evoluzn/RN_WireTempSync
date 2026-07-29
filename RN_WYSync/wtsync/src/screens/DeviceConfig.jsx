@@ -11,7 +11,7 @@ import Zeroconf from 'react-native-zeroconf';
 import { resolveEspIp } from '../utils/EspDiscovery';
 
 const ESP_AP_PASSWORD = '12345678';
-const ESP_SSID_PREFIX = 'WTS';
+const ESP_SSID_PREFIX = 'WTSF0C045';
 // const DEVICE_URL = 'http://abc.local';
 
 export default function DeviceConfig({ navigation, route }) {

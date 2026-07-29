@@ -46,6 +46,7 @@ def register_product():
     )
     
     print("Purchase Date:", purchase_date)
+    access_point=serial[:3]+"Ap"+serial[3:]
 
 
     product = RegisterProduct(
@@ -82,7 +83,8 @@ def register_product():
         
         sms_enabled=data.get("sms_enabled", False),
          
-        sms_phone=data.get('sms_phone')
+        sms_phone=data.get('sms_phone'),
+        access_point=access_point
        
         
 
@@ -103,6 +105,7 @@ def register_product():
     print("alert_email", product.alert_email)
     print("sms_enabled" ,  product.sms_enabled )
     print("alert_phone",product.sms_phone)
+    print("Access Point:", product.access_point)
     
 
     db.session.add(product)
@@ -183,7 +186,8 @@ def get_products():
                   
                 "sms_enabled": product.sms_enabled,
                 
-                "alert_phone": product.sms_phone
+                "alert_phone": product.sms_phone,
+                "access_point": product.access_point,
                  
                  
             })

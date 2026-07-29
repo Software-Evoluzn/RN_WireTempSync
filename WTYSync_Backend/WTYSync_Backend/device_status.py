@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from WTYSync_Backend.WTYSync_Backend.models.RegisterProduct import RegisterProduct
+from models.RegisterProduct import RegisterProduct
 from database.db import db
 
 
@@ -15,7 +15,7 @@ def init_socket(socketio):
 
 def check_device_status():
 
-    timeout = datetime.utcnow() - timedelta(seconds=30)
+    timeout = datetime.now() - timedelta(seconds=150)
 
 
     devices = RegisterProduct.query.all()
