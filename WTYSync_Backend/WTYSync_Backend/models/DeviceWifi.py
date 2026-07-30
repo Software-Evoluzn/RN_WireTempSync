@@ -9,8 +9,7 @@ class DeviceWifi(db.Model):
     firebase_uid = db.Column(db.String(100), nullable=False)
     ssid = db.Column(db.String(100), nullable=False)
     password = db.Column(db.Text, nullable=False) # Encrypt this
-       # ESP32 online/offline status
-    online_status = db.Column(db.Boolean, nullable=False, default=False)
+
 
     updated_at = db.Column(
         db.DateTime,

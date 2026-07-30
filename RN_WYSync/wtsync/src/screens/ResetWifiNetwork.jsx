@@ -9,8 +9,14 @@ import WifiManager from 'react-native-wifi-reborn';
 
 
 import { resolveEspIp } from '../utils/EspDiscovery';
+import { useAppTheme } from '../services/theme';
 
 export default function ResetwifiNetwork({ navigation }) {
+  // ── Theme (new) ───────────────────────────────────────
+  // Follows Android system Light/Dark mode automatically via
+  // useColorScheme() inside useAppTheme(). No manual toggle.
+  const { colors, isDark } = useAppTheme();
+
   const [modal, setModal] = useState('');
   const [wifiList, setWifiList] = useState([]);
   const [selSSID, setSelSSID] = useState('');
@@ -159,16 +165,16 @@ export default function ResetwifiNetwork({ navigation }) {
     }
   };
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <TouchableOpacity onPress={() => navigation.goBack()}
         style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 }}>
         <Text style={{ fontSize: 16, color: '#1D9E75', fontWeight: '500' }}>‹ Back</Text>
       </TouchableOpacity>
 
       <View style={{ flex: 1, padding: 24, justifyContent: 'center' }}>
-        <View style={{ backgroundColor: '#fff', borderRadius: 24, padding: 24, elevation: 4 }}>
-          <Text style={{ fontSize: 28, fontWeight: '700', textAlign: 'center', color: '#0F172A' }}>Change WiFi</Text>
-          <Text style={{ marginTop: 12, textAlign: 'center', color: '#64748B' }}>
+        <View style={{ backgroundColor: colors.card, borderRadius: 24, padding: 24, elevation: 4 }}>
+          <Text style={{ fontSize: 28, fontWeight: '700', textAlign: 'center', color: colors.text }}>Change WiFi</Text>
+          <Text style={{ marginTop: 12, textAlign: 'center', color: colors.subText }}>
             Select a new 2.4GHz network for your ESP32 device.
           </Text>
 
@@ -186,7 +192,7 @@ export default function ResetwifiNetwork({ navigation }) {
           <TouchableOpacity onPress={scanWifi} disabled={busy}
             style={{
               marginTop: 20, paddingVertical: 16, borderRadius: 14, alignItems: 'center',
-              backgroundColor: busy ? '#CBD5E1' : '#1D9E75',
+              backgroundColor: busy ? (isDark ? '#374151' : '#CBD5E1') : '#1D9E75',
             }}>
             <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Select WiFi Network</Text>
           </TouchableOpacity>
@@ -195,38 +201,38 @@ export default function ResetwifiNetwork({ navigation }) {
 
       <Modal visible={modal === 'loading'} transparent>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 32, alignItems: 'center', marginHorizontal: 40 }}>
+          <View style={{ backgroundColor: colors.card, borderRadius: 20, padding: 32, alignItems: 'center', marginHorizontal: 40 }}>
             <ActivityIndicator size="large" color="#1D9E75" />
-            <Text style={{ marginTop: 16, fontSize: 16, fontWeight: '600' }}>{statusMsg}</Text>
+            <Text style={{ marginTop: 16, fontSize: 16, fontWeight: '600', color: colors.text }}>{statusMsg}</Text>
           </View>
         </View>
       </Modal>
 
       <Modal visible={modal === 'wifi'} animationType="slide" transparent onRequestClose={() => setModal('')}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '80%' }}>
-            <View style={{ width: 40, height: 4, backgroundColor: '#ddd', borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 16 }} />
+          <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '80%' }}>
+            <View style={{ width: 40, height: 4, backgroundColor: colors.border, borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 16 }} />
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 12 }}>
-              <Text style={{ fontSize: 18, fontWeight: '600' }}>Select 2.4GHz WiFi</Text>
-              <TouchableOpacity onPress={() => setModal('')}><Text style={{ fontSize: 16, color: '#999', padding: 8 }}>✕</Text></TouchableOpacity>
+              <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Select 2.4GHz WiFi</Text>
+              <TouchableOpacity onPress={() => setModal('')}><Text style={{ fontSize: 16, color: colors.subText, padding: 8 }}>✕</Text></TouchableOpacity>
             </View>
             {busy ? (
               <View style={{ alignItems: 'center', paddingVertical: 50 }}>
-                <ActivityIndicator size="large" color="#1D9E75" /><Text style={{ marginTop: 12, color: '#666' }}>Scanning...</Text>
+                <ActivityIndicator size="large" color="#1D9E75" /><Text style={{ marginTop: 12, color: colors.subText }}>Scanning...</Text>
               </View>
             ) : (
               <FlatList data={wifiList} keyExtractor={(_, i) => i.toString()} style={{ maxHeight: 400 }}
                 ListEmptyComponent={<View style={{ alignItems: 'center', paddingVertical: 50 }}>
-                  <Text style={{ color: '#666' }}>No 2.4GHz networks</Text>
+                  <Text style={{ color: colors.subText }}>No 2.4GHz networks</Text>
                   <TouchableOpacity onPress={scanWifi} style={{ marginTop: 16, backgroundColor: '#1D9E75', paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8 }}>
                     <Text style={{ color: '#fff', fontWeight: '600' }}>Scan Again</Text></TouchableOpacity></View>}
                 renderItem={({ item }) => (
                   <TouchableOpacity onPress={() => pickWifi(item.SSID)}
-                    style={{ flexDirection: 'row', alignItems: 'center', padding: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#f0f0f0', gap: 10 }}>
+                    style={{ flexDirection: 'row', alignItems: 'center', padding: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 10 }}>
                     <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#1D9E75' }} />
-                    <View style={{ flex: 1 }}><Text style={{ fontSize: 15, fontWeight: '500' }}>{item.SSID}</Text>
-                      <Text style={{ fontSize: 12, color: '#999' }}>2.4 GHz</Text></View>
-                    <Text style={{ color: '#ccc', fontSize: 20 }}>›</Text>
+                    <View style={{ flex: 1 }}><Text style={{ fontSize: 15, fontWeight: '500', color: colors.text }}>{item.SSID}</Text>
+                      <Text style={{ fontSize: 12, color: colors.subText }}>2.4 GHz</Text></View>
+                    <Text style={{ color: colors.subText, fontSize: 20 }}>›</Text>
                   </TouchableOpacity>)} />
             )}
           </View>
@@ -235,20 +241,20 @@ export default function ResetwifiNetwork({ navigation }) {
 
       <Modal visible={modal === 'password'} animationType="slide" transparent onRequestClose={() => setModal('')}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20 }}>
-            <View style={{ width: 40, height: 4, backgroundColor: '#ddd', borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 16 }} />
+          <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20 }}>
+            <View style={{ width: 40, height: 4, backgroundColor: colors.border, borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 16 }} />
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 12 }}>
-              <Text style={{ fontSize: 18, fontWeight: '600' }}>Enter Password</Text>
-              <TouchableOpacity onPress={() => setModal('')}><Text style={{ fontSize: 16, color: '#999', padding: 8 }}>✕</Text></TouchableOpacity>
+              <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Enter Password</Text>
+              <TouchableOpacity onPress={() => setModal('')}><Text style={{ fontSize: 16, color: colors.subText, padding: 8 }}>✕</Text></TouchableOpacity>
             </View>
             <View style={{ paddingHorizontal: 16, paddingBottom: 30 }}>
-              <Text style={{ fontSize: 12, fontWeight: '600', color: '#999', marginBottom: 6 }}>SSID</Text>
-              <TextInput style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, fontSize: 15, backgroundColor: '#f5f5f5', color: '#999', marginBottom: 16 }}
+              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.subText, marginBottom: 6 }}>SSID</Text>
+              <TextInput style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, fontSize: 15, backgroundColor: isDark ? '#161616' : '#f5f5f5', color: colors.subText, marginBottom: 16 }}
                 value={selSSID} editable={false} />
-              <Text style={{ fontSize: 12, fontWeight: '600', color: '#999', marginBottom: 6 }}>PASSWORD</Text>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.subText, marginBottom: 6 }}>PASSWORD</Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-                <TextInput style={{ flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, fontSize: 15 }}
-                  placeholder="Enter password" placeholderTextColor="#bbb" secureTextEntry={!showPw} value={newPw} onChangeText={setNewPw} autoFocus />
+                <TextInput style={{ flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, fontSize: 15, color: colors.text }}
+                  placeholder="Enter password" placeholderTextColor={colors.subText} secureTextEntry={!showPw} value={newPw} onChangeText={setNewPw} autoFocus />
                 <TouchableOpacity style={{ padding: 10 }} onPress={() => setShowPw(!showPw)}>
                   <Text style={{ fontSize: 18 }}>{showPw ? '🙈' : '👁️'}</Text></TouchableOpacity>
               </View>
@@ -257,8 +263,8 @@ export default function ResetwifiNetwork({ navigation }) {
                 <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Change WiFi</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setModal('')}
-                style={{ paddingVertical: 14, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: '#ddd', marginTop: 10 }}>
-                <Text style={{ fontSize: 15, fontWeight: '500' }}>Cancel</Text>
+                style={{ paddingVertical: 14, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: colors.border, marginTop: 10 }}>
+                <Text style={{ fontSize: 15, fontWeight: '500', color: colors.text }}>Cancel</Text>
               </TouchableOpacity>
             </View>
           </View>

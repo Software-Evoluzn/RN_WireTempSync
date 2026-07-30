@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import WifiManager from 'react-native-wifi-reborn';
 import styles from '../styles/PasswordStyles';
+import { useAppTheme } from '../services/theme';
 
 const ESP_AP_IP = 'http://192.168.4.1';
 
@@ -25,6 +26,11 @@ const STATUS = {
 
 export default function PasswordScreen({ route, navigation }) {
   const { network } = route.params;
+
+  // ── Theme (new) ───────────────────────────────────────
+  // Follows Android system Light/Dark mode automatically via
+  // useColorScheme() inside useAppTheme(). No manual toggle.
+  const { colors, isDark } = useAppTheme();
 
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -209,24 +215,66 @@ export default function PasswordScreen({ route, navigation }) {
 
   const busy = status === STATUS.SENDING || status === STATUS.VERIFYING;
 
+  // Theme-aware variants of the success/error card colors (new).
+  // Spacing/typography/layout values are untouched — only the
+  // background/border/text colors swap between light and dark tints.
+  const cardStyle = {
+    success: {
+      marginTop: 25, padding: 20, borderRadius: 18,
+      backgroundColor: isDark ? '#102821' : '#F0FDF4',
+      borderWidth: 1, borderColor: isDark ? '#1F4A38' : '#BBF7D0',
+    },
+    successTitle: {
+      fontSize: 20, fontWeight: '700', color: isDark ? '#34D399' : '#0F6E56', textAlign: 'center', marginBottom: 10,
+    },
+    error: {
+      marginTop: 25, padding: 20, borderRadius: 18,
+      backgroundColor: isDark ? '#341414' : '#FEF2F2',
+      borderWidth: 1, borderColor: isDark ? '#5C1F1F' : '#FECACA',
+    },
+    errorTitle: {
+      fontSize: 20, fontWeight: '700', color: '#DC2626', textAlign: 'center', marginBottom: 10,
+    },
+    errorMsg: {
+      color: isDark ? '#FCA5A5' : '#7F1D1D', textAlign: 'center', lineHeight: 20,
+    },
+    muted: {
+      marginTop: 6, textAlign: 'center', color: colors.subText,
+    },
+    primaryBtn: {
+      marginTop: 18, padding: 14, borderRadius: 12, backgroundColor: '#1D9E75',
+    },
+    retryBtn: {
+      marginTop: 18, padding: 14, borderRadius: 12, backgroundColor: '#DC2626',
+    },
+    primaryBtnText: {
+      color: '#fff', textAlign: 'center', fontWeight: '700',
+    },
+  };
+
   // ----------------------------------------------------------------
   // UI
   // ----------------------------------------------------------------
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
-      <View style={styles.container}>
+    <ScrollView contentContainerStyle={{ flexGrow: 1, backgroundColor: colors.background }}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} disabled={busy}>
-          <Text style={styles.backText}>‹ Back</Text>
+          <Text style={[styles.backText, { color: '#1D9E75' }]}>‹ Back</Text>
         </TouchableOpacity>
 
-        <Text style={styles.heading}>Configure Device</Text>
+        <Text style={[styles.heading, { color: colors.text }]}>Configure Device</Text>
 
-        <TextInput style={styles.input} value={network.SSID} editable={false} />
+        <TextInput
+          style={[styles.input, { borderColor: colors.border, backgroundColor: colors.card, color: colors.subText }]}
+          value={network.SSID}
+          editable={false}
+        />
 
-        <View style={styles.passwordWrap}>
+        <View style={[styles.passwordWrap, { borderColor: colors.border, backgroundColor: colors.card }]}>
           <TextInput
-            style={styles.passwordInput}
+            style={[styles.passwordInput, { color: colors.text }]}
             placeholder="Enter Password"
+            placeholderTextColor={colors.subText}
             secureTextEntry={!showPassword}
             value={password}
             onChangeText={setPassword}
@@ -300,36 +348,3 @@ export default function PasswordScreen({ route, navigation }) {
     </ScrollView>
   );
 }
-
-// Inline styles for the new success/error cards (taaki tumhari styles file ko chhedna na pade)
-const cardStyle = {
-  success: {
-    marginTop: 25, padding: 20, borderRadius: 18,
-    backgroundColor: '#F0FDF4', borderWidth: 1, borderColor: '#BBF7D0',
-  },
-  successTitle: {
-    fontSize: 20, fontWeight: '700', color: '#0F6E56', textAlign: 'center', marginBottom: 10,
-  },
-  error: {
-    marginTop: 25, padding: 20, borderRadius: 18,
-    backgroundColor: '#FEF2F2', borderWidth: 1, borderColor: '#FECACA',
-  },
-  errorTitle: {
-    fontSize: 20, fontWeight: '700', color: '#DC2626', textAlign: 'center', marginBottom: 10,
-  },
-  errorMsg: {
-    color: '#7F1D1D', textAlign: 'center', lineHeight: 20,
-  },
-  muted: {
-    marginTop: 6, textAlign: 'center', color: '#64748B',
-  },
-  primaryBtn: {
-    marginTop: 18, padding: 14, borderRadius: 12, backgroundColor: '#1D9E75',
-  },
-  retryBtn: {
-    marginTop: 18, padding: 14, borderRadius: 12, backgroundColor: '#DC2626',
-  },
-  primaryBtnText: {
-    color: '#fff', textAlign: 'center', fontWeight: '700',
-  },
-};

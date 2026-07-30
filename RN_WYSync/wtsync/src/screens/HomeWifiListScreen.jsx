@@ -6,10 +6,16 @@ import {
 } from 'react-native';
 import WifiManager from 'react-native-wifi-reborn';
 import styles from '../styles/WiFiListStyles';
+import { useAppTheme } from '../services/theme';
 
 
 
 export default function HomeWifiListScreen({ navigation }) {
+  // ── Theme (new) ───────────────────────────────────────
+  // Follows Android system Light/Dark mode automatically via
+  // useColorScheme() inside useAppTheme(). No manual toggle.
+  const { colors, isDark } = useAppTheme();
+
   const [networks, setNetworks] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,27 +59,27 @@ export default function HomeWifiListScreen({ navigation }) {
 
   const renderItem = ({ item }) => (
     <TouchableOpacity
-      style={styles.networkRow}
+      style={[styles.networkRow, { backgroundColor: colors.card, borderColor: colors.border }]}
       onPress={() => navigation.navigate('Password', { network: item })}
     >
       <View style={[styles.signalDot, { backgroundColor: '#1D9E75' }]} />
       <View style={{ flex: 1 }}>
-        <Text style={styles.ssidText}>{item.SSID}</Text>
-        <Text style={styles.metaText}>2.4 GHz</Text>
+        <Text style={[styles.ssidText, { color: colors.text }]}>{item.SSID}</Text>
+        <Text style={[styles.metaText, { color: colors.subText }]}>2.4 GHz</Text>
       </View>
-      <Text style={styles.chevron}>›</Text>
+      <Text style={[styles.chevron, { color: colors.subText }]}>›</Text>
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.heading}>Select WiFi</Text>
-      <Text style={styles.subtitle}>Choose Home WiFi (2.4 GHz only)</Text>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Text style={[styles.heading, { color: colors.text }]}>Select WiFi</Text>
+      <Text style={[styles.subtitle, { color: colors.subText }]}>Choose Home WiFi (2.4 GHz only)</Text>
 
       {loading ? (
         <View style={{ marginTop: 50 }}>
           <ActivityIndicator size="large" color="#1D9E75" />
-          <Text style={{ marginTop: 10, textAlign: 'center' }}>Scanning 2.4GHz WiFi...</Text>
+          <Text style={{ marginTop: 10, textAlign: 'center', color: colors.subText }}>Scanning 2.4GHz WiFi...</Text>
         </View>
       ) : (
         <FlatList
@@ -84,7 +90,7 @@ export default function HomeWifiListScreen({ navigation }) {
             onRefresh={onRefresh}
           ListEmptyComponent={
             <View style={{ alignItems: 'center', marginTop: 50 }}>
-              <Text style={{ fontSize: 16, color: '#999' }}>No 2.4GHz networks found</Text>
+              <Text style={{ fontSize: 16, color: colors.subText }}>No 2.4GHz networks found</Text>
               <TouchableOpacity
                 style={{ marginTop: 16, backgroundColor: '#1D9E75', paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8 }}
                 onPress={() => { setLoading(true); fetchWifiList(); }}
