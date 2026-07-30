@@ -1492,9 +1492,9 @@ const WtsDashboard = () => {
 
     if (option === "Reset WiFi") {
 
-      navigation.navigate("DeviceConfig", {
-        product: selectedProduct?.serial_no
-      });
+      // navigation.navigate("DeviceConfig", {
+      //   product: selectedProduct?.serial_no
+      // });
 
     }
 

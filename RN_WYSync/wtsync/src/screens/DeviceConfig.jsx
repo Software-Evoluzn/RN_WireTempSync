@@ -11,10 +11,16 @@ import Zeroconf from 'react-native-zeroconf';
 import { resolveEspIp } from '../utils/EspDiscovery';
 
 const ESP_AP_PASSWORD = '12345678';
-const ESP_SSID_PREFIX = 'WTSF0C045';
+
 // const DEVICE_URL = 'http://abc.local';
 
 export default function DeviceConfig({ navigation, route }) {
+
+  const {product} = route.params;
+
+  console.log("sejal want to see access point ",product.access_point)
+  const ESP_SSID_PREFIX = product.access_point;
+
   const [networks, setNetworks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
