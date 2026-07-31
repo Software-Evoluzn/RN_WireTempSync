@@ -43,6 +43,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   Modal,
+  Alert,
   Dimensions,
   Animated,
   Platform,
@@ -54,15 +55,17 @@ import Svg, { Line as SvgLine, Path, Text as SvgText, Circle } from 'react-nativ
 import { useNavigation, useRoute } from '@react-navigation/native';
 import io from 'socket.io-client';
 import auth from '@react-native-firebase/auth';
+import RNFetchBlob from 'react-native-blob-util';
+import IP_ADDRESS from '../services/ipconfig';
 
-import { verifyDeviceWifi } from '../services/WifiService';
+import { verifyDeviceWifi ,resetDeviceWifi} from '../services/WifiService';
 import { resetDeviceRemote } from './DeviceConfig';
 import { useAppTheme } from '../services/theme';
 
 // -------------------------------------------------------------------------
 // BACKEND CONFIG
 // -------------------------------------------------------------------------
-const BACKEND_URL = 'http://192.168.1.42:5006';
+const BACKEND_URL = `http://${IP_ADDRESS}:5006`;
 
 // -------------------------------------------------------------------------
 // COLOR CONSTANTS  (matches web dashboard color rules)
@@ -547,6 +550,211 @@ const CalendarModal = memo(({ visible, selectedDate, onSelect, onClose }) => {
 
           <TouchableOpacity style={styles.calendarTodayLink} onPress={handleJumpToday}>
             <Text style={styles.calendarTodayLinkText}>Jump to Today</Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </TouchableOpacity>
+    </Modal>
+  );
+});
+
+// -------------------------------------------------------------------------
+// ExportMenu — small popup with "Today" / "Set Range" export options
+// -------------------------------------------------------------------------
+const ExportMenu = memo(({ visible, onClose, onToday, onSetRange, anchorPosition }) => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
+
+  return (
+    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
+      <TouchableOpacity style={styles.headerMenuOverlay} activeOpacity={1} onPress={onClose}>
+        <View
+          style={[
+            styles.headerMenuList,
+            { top: anchorPosition.top, right: anchorPosition.right },
+          ]}
+        >
+          <TouchableOpacity
+            style={styles.dropdownItem}
+            onPress={() => {
+              onClose();
+              onToday();
+            }}
+          >
+            <Text style={styles.dropdownItemText}>Today</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.dropdownItem}
+            onPress={() => {
+              onClose();
+              onSetRange();
+            }}
+          >
+            <Text style={styles.dropdownItemText}>Set Range</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+});
+
+// -------------------------------------------------------------------------
+// RangeCalendarModal — two-tap range picker (tap start date, then end
+// date) used by the "Set Range" export option. Reuses the same
+// month-grid layout as CalendarModal.
+// -------------------------------------------------------------------------
+const RangeCalendarModal = memo(({ visible, onConfirm, onClose }) => {
+  const { colors } = useAppTheme();
+  const styles = createStyles(colors);
+  const today = new Date();
+
+  const [viewMonth, setViewMonth] = useState(
+    () => new Date(today.getFullYear(), today.getMonth(), 1)
+  );
+  const [rangeStart, setRangeStart] = useState(null);
+  const [rangeEnd, setRangeEnd] = useState(null);
+
+  useEffect(() => {
+    if (visible) {
+      setViewMonth(new Date(today.getFullYear(), today.getMonth(), 1));
+      setRangeStart(null);
+      setRangeEnd(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  const isViewingCurrentMonth =
+    viewMonth.getFullYear() === today.getFullYear() &&
+    viewMonth.getMonth() === today.getMonth();
+
+  const goPrevMonth = useCallback(() => {
+    setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+  }, []);
+  const goNextMonth = useCallback(() => {
+    if (isViewingCurrentMonth) return;
+    setViewMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1));
+  }, [isViewingCurrentMonth]);
+
+  const handleDayPress = useCallback(
+    (day) => {
+      if (!rangeStart || (rangeStart && rangeEnd)) {
+        // start a fresh selection
+        setRangeStart(day);
+        setRangeEnd(null);
+        return;
+      }
+      // second tap -> set end (swap if an earlier date was picked)
+      if (day < rangeStart) {
+        setRangeEnd(rangeStart);
+        setRangeStart(day);
+      } else {
+        setRangeEnd(day);
+      }
+    },
+    [rangeStart, rangeEnd]
+  );
+
+  const cells = useMemo(() => {
+    const year = viewMonth.getFullYear();
+    const month = viewMonth.getMonth();
+    const firstWeekday = new Date(year, month, 1).getDay();
+    const totalDays = new Date(year, month + 1, 0).getDate();
+    const list = [];
+    for (let i = 0; i < firstWeekday; i += 1) list.push(null);
+    for (let day = 1; day <= totalDays; day += 1) list.push(new Date(year, month, day));
+    return list;
+  }, [viewMonth]);
+
+  const isInRange = (d) => rangeStart && rangeEnd && d > rangeStart && d < rangeEnd;
+  const isEndpoint = (d) =>
+    (rangeStart && isSameDay(d, rangeStart)) || (rangeEnd && isSameDay(d, rangeEnd));
+
+  const handleConfirm = useCallback(() => {
+    if (!rangeStart) return;
+    onConfirm(rangeStart, rangeEnd || rangeStart);
+  }, [rangeStart, rangeEnd, onConfirm]);
+
+  return (
+    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+        <TouchableOpacity activeOpacity={1} style={styles.calendarCard}>
+          <View style={styles.calendarHeaderRow}>
+            <TouchableOpacity style={styles.calendarNavBtn} onPress={goPrevMonth}>
+              <Icon name="chevron-left" size={20} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={styles.calendarMonthText}>
+              {MONTH_LABELS[viewMonth.getMonth()]} {viewMonth.getFullYear()}
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.calendarNavBtn,
+                isViewingCurrentMonth && styles.calendarNavBtnDisabled,
+              ]}
+              onPress={goNextMonth}
+              disabled={isViewingCurrentMonth}
+            >
+              <Icon
+                name="chevron-right"
+                size={20}
+                color={isViewingCurrentMonth ? COLORS.disabledDay : colors.text}
+              />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.calendarWeekdayRow}>
+            {WEEKDAY_LABELS.map((wd) => (
+              <View key={wd} style={styles.calendarWeekdayCell}>
+                <Text style={styles.calendarWeekdayText}>{wd}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={styles.calendarGrid}>
+            {cells.map((cellDate, idx) => {
+              if (!cellDate) {
+                return <View key={`empty-${idx}`} style={styles.calendarDayCell} />;
+              }
+              const isFuture = cellDate > today && !isSameDay(cellDate, today);
+              return (
+                <TouchableOpacity
+                  key={cellDate.toISOString()}
+                  style={styles.calendarDayCell}
+                  disabled={isFuture}
+                  onPress={() => handleDayPress(cellDate)}
+                >
+                  <View
+                    style={[
+                      styles.calendarDayInner,
+                      isInRange(cellDate) && { backgroundColor: colors.border },
+                      isEndpoint(cellDate) && styles.calendarDaySelected,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.calendarDayText,
+                        isFuture && styles.calendarDayTextDisabled,
+                        isEndpoint(cellDate) && styles.calendarDayTextSelected,
+                      ]}
+                    >
+                      {cellDate.getDate()}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <Text style={styles.chartHintText}>
+            {rangeStart ? formatDateLabel(rangeStart) : 'Select start date'}
+            {'  ->  '}
+            {rangeEnd ? formatDateLabel(rangeEnd) : rangeStart ? 'Select end date' : ''}
+          </Text>
+
+          <TouchableOpacity
+            style={[styles.calendarTodayLink, !rangeStart && { opacity: 0.4 }]}
+            disabled={!rangeStart}
+            onPress={handleConfirm}
+          >
+            <Text style={styles.calendarTodayLinkText}>Export Selected Range</Text>
           </TouchableOpacity>
         </TouchableOpacity>
       </TouchableOpacity>
@@ -1070,6 +1278,136 @@ const DeviceCard = memo(
       onChartPress && onChartPress(device.serial_no);
     }, [onChartPress, device.serial_no]);
 
+    // -----------------------------------------------------------------
+    // Excel export ("Today" / "Set Range")
+    // -----------------------------------------------------------------
+    const [exportMenuVisible, setExportMenuVisible] = useState(false);
+    const [rangeModalVisible, setRangeModalVisible] = useState(false);
+    const [exporting, setExporting] = useState(false);
+    const exportAnchorRef = useRef(null);
+    const [exportMenuPos, setExportMenuPos] = useState({ top: 0, right: 0 });
+
+    const openExportMenu = useCallback(() => {
+      if (!exportAnchorRef.current) return;
+      exportAnchorRef.current.measureInWindow((x, y, width, height) => {
+        setExportMenuPos({
+          top: y + height + 6,
+          right: Math.max(screenWidth - (x + width), 12),
+        });
+        setExportMenuVisible(true);
+      });
+    }, []);
+
+    const downloadExport = useCallback(
+      async (startDate, endDate) => {
+        try {
+          setExporting(true);
+          const startKey = dateKeyOf(startDate);
+          const endKey = dateKeyOf(endDate);
+
+          const url =
+            `${BACKEND_URL}/api/telemetry-export?serial_no=${encodeURIComponent(
+              device.serial_no
+            )}` + `&start_date=${startKey}&end_date=${endKey}`;
+
+          const pad2 = (n) => String(n).padStart(2, '0');
+          const startLabel = `${pad2(startDate.getDate())}_${pad2(
+            startDate.getMonth() + 1
+          )}_${String(startDate.getFullYear()).slice(-2)}`;
+          const endLabel = `${pad2(endDate.getDate())}_${pad2(
+            endDate.getMonth() + 1
+          )}_${String(endDate.getFullYear()).slice(-2)}`;
+          const filename = `wts_${startLabel}_to_${endLabel}.xlsx`;
+
+          // Save to the device's public Downloads folder. On Android this
+          // is routed through the system DownloadManager (via
+          // addAndroidDownloads), which is the only reliable way to write
+          // into the public Downloads folder on Android 10+ without
+          // requesting the heavy "All files access" permission — it also
+          // shows a normal download notification and appears in the
+          // Files/Downloads app right away.
+          if (Platform.OS === 'android') {
+            const { config, fs } = RNFetchBlob;
+            const downloadDir = fs.dirs.LegacyDownloadDir;
+
+            const res = await config({
+              fileCache: true,
+              addAndroidDownloads: {
+                useDownloadManager: true,
+                notification: true,
+                title: filename,
+                description: 'WTS telemetry export',
+                mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                path: `${downloadDir}/${filename}`,
+              },
+            }).fetch('GET', url);
+
+            // NOTE: when useDownloadManager is true, the actual HTTP
+            // request is handed off to Android's system DownloadManager,
+            // so res.info() does not reliably report the real HTTP
+            // status here (it's frequently undefined even on success).
+            // If fetch() resolved without throwing, the download was
+            // successfully handed to DownloadManager. Genuine backend
+            // errors (404/500) are instead caught in the outer catch
+            // block below, since DownloadManager still saves the error
+            // response body to disk but fetch() consistently rejects
+            // in that case on this library version.
+
+            Alert.alert('Export Saved', `${filename} has been saved to your Downloads folder.`);
+          } else {
+            // iOS has no public "Downloads" folder concept the same way;
+            // save into the app's Documents directory, which is visible
+            // in the Files app as long as file sharing is enabled for
+            // this app (UIFileSharingEnabled in Info.plist).
+            const { config, fs } = RNFetchBlob;
+            const localPath = `${fs.dirs.DocumentDir}/${filename}`;
+
+            const res = await config({
+              fileCache: true,
+              path: localPath,
+            }).fetch('GET', url);
+
+            const statusCode = res.info().status;
+            if (statusCode !== 200) {
+              console.warn('Export failed, status:', statusCode);
+              Alert.alert(
+                'Export Failed',
+                statusCode === 404
+                  ? 'No data found for the selected date(s).'
+                  : `Server returned an error (status ${statusCode}). Check the backend logs.`
+              );
+              return;
+            }
+
+            Alert.alert('Export Saved', `${filename} has been saved to:\n${localPath}`);
+          }
+        } catch (error) {
+          console.warn('Export error:', error);
+          Alert.alert('Export Failed', 'Could not download the file. Check your connection and try again.');
+        } finally {
+          setExporting(false);
+        }
+      },
+      [device.serial_no]
+    );
+
+    const handleExportToday = useCallback(() => {
+      const now = new Date();
+      downloadExport(now, now);
+    }, [downloadExport]);
+
+    const handleExportRange = useCallback(() => {
+      setRangeModalVisible(true);
+    }, []);
+
+    const handleRangeConfirm = useCallback(
+      (start, end) => {
+        setRangeModalVisible(false);
+        downloadExport(start, end);
+      },
+      [downloadExport]
+    );
+
     const handleCardLayout = useCallback(
       (event) => {
         onCardLayout &&
@@ -1119,6 +1457,19 @@ const DeviceCard = memo(
 
           <View style={styles.deviceHeaderIcons}>
             <TouchableOpacity
+              ref={exportAnchorRef}
+              style={styles.iconCircle}
+              onPress={openExportMenu}
+              disabled={exporting}
+            >
+              {exporting ? (
+                <ActivityIndicator size="small" color={COLORS.B} />
+              ) : (
+                <Icon name="file-download" size={16} color={colors.subText} />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
               style={styles.iconCircle}
               onPress={handleChartPress}
             >
@@ -1126,6 +1477,20 @@ const DeviceCard = memo(
             </TouchableOpacity>
           </View>
         </View>
+
+        <ExportMenu
+          visible={exportMenuVisible}
+          onClose={() => setExportMenuVisible(false)}
+          onToday={handleExportToday}
+          onSetRange={handleExportRange}
+          anchorPosition={exportMenuPos}
+        />
+
+        <RangeCalendarModal
+          visible={rangeModalVisible}
+          onConfirm={handleRangeConfirm}
+          onClose={() => setRangeModalVisible(false)}
+        />
 
         {isOnline && device.panels.length > 0 ? (
           <View style={styles.panelsWrap}>
@@ -1491,17 +1856,29 @@ const WtsDashboard = () => {
       return;
 
     if (option === "Reset WiFi") {
+      console.log(verified.ssid);
+      console.log(verified.password);
 
-      // navigation.navigate("DeviceConfig", {
-      //   product: selectedProduct?.serial_no
-      // });
+
+      const result = await resetDeviceWifi(deviceId);
+
+      if (!result.success) {
+        Alert.alert("Error", result.message);
+        return;
+      }
+
+      navigation.navigate("Home");
+
+
 
     }
 
     if (option === "Change WiFi") {
 
-      navigation.navigate("DeviceConfig", {
-        product: selectedProduct?.serial_no
+      navigation.navigate("ResetwifiNetwork", {
+        product: selectedProduct?.serial_no,
+        verifiedData:verified
+        
       });
 
     }

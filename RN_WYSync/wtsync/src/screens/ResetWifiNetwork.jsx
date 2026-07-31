@@ -1,21 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   View, Text, TouchableOpacity, FlatList, TextInput,
   Alert, ActivityIndicator, Modal, PermissionsAndroid, Platform,
+  StyleSheet, Animated,
 } from 'react-native';
 import WifiManager from 'react-native-wifi-reborn';
-
-
+import Feather from 'react-native-vector-icons/Feather';
 
 import { resolveEspIp } from '../utils/EspDiscovery';
 import { useAppTheme } from '../services/theme';
+import { changeDeviceWifi } from '../services/WifiService';
 
-export default function ResetwifiNetwork({ navigation }) {
-  // ── Theme (new) ───────────────────────────────────────
+export default function ResetwifiNetwork({ navigation, route }) {
+  // ── Theme (unchanged) ─────────────────────────────────
   // Follows Android system Light/Dark mode automatically via
   // useColorScheme() inside useAppTheme(). No manual toggle.
+
+  const { product, verifiedData } = route.params;
+
+  console.log("Product:", product);
+  console.log("Verified Data:", verifiedData);
+
   const { colors, isDark } = useAppTheme();
+  const styles = createStyles(colors);
 
   const [modal, setModal] = useState('');
   const [wifiList, setWifiList] = useState([]);
@@ -49,6 +57,27 @@ export default function ResetwifiNetwork({ navigation }) {
 
   //   return () => { clearTimeout(timeout); zc.stop(); zc.removeAllListeners(); };
   // }, []);
+
+  // ── Visual-only entrance animation (new) ──────────────
+  // Mirrors DeviceConfig's header/card entrance treatment. Purely
+  // presentational — does not touch state, effects, or handlers.
+  const headerFade = useRef(new Animated.Value(0)).current;
+  const headerSlide = useRef(new Animated.Value(10)).current;
+  const accentLineWidth = useRef(new Animated.Value(0)).current;
+  const eyebrowFade = useRef(new Animated.Value(0)).current;
+  const cardFade = useRef(new Animated.Value(0)).current;
+  const cardSlide = useRef(new Animated.Value(14)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(headerFade, { toValue: 1, duration: 550, useNativeDriver: true }),
+      Animated.timing(headerSlide, { toValue: 0, duration: 550, useNativeDriver: true }),
+      Animated.timing(eyebrowFade, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.timing(accentLineWidth, { toValue: 56, duration: 700, delay: 200, useNativeDriver: false }),
+      Animated.timing(cardFade, { toValue: 1, duration: 600, delay: 150, useNativeDriver: true }),
+      Animated.timing(cardSlide, { toValue: 0, duration: 600, delay: 150, useNativeDriver: true }),
+    ]).start();
+  }, []);
 
   const scanWifi = async () => {
     setBusy(true); setModal('wifi'); setWifiList([]);
@@ -93,178 +122,278 @@ export default function ResetwifiNetwork({ navigation }) {
     });
   };
 
-
   const changeWifi = async () => {
+
     if (newPw.length < 8) {
       Alert.alert("Error", "Minimum 8 characters");
       return;
     }
 
-    // Android: SSID padhne ke liye location permission chahiye
-    if (Platform.OS === "android") {
-      await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-      );
-    }
-
-    setBusy(true);
-    setModal("loading");
-    setStatusMsg("Finding device...");
-
     try {
-      console.log("1. Starting resolveEspIp");
-      const ip = await resolveEspIp();
-      console.log("2. IP Found:", ip);
 
-      setStatusMsg("Sending WiFi credentials...");
-      console.log("3. Sending to:", `http://${ip}/set_wifi`);
+      setBusy(true);
 
-      // Credentials bhejo. ESP switch hote hi connection drop karega,
-      // isliye response nahi aayega — error ko ignore karo.
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
-      try {
-        await fetch(`http://${ip}/set_wifi`, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: `ssid=${encodeURIComponent(selSSID)}&password=${encodeURIComponent(newPw)}`,
-          signal: controller.signal,
-        });
-      } catch (sendErr) {
-        console.log("Expected drop:", sendErr.name, sendErr.message);
-      } finally {
-        clearTimeout(timeoutId);
-      }
+      const result = await changeDeviceWifi({
+        deviceId: verifiedData.deviceId,
+        firebaseUid: verifiedData.firebaseUid,
+        ssid: selSSID,
+        password: newPw,
+      });
 
-      // Polling: second WiFi se connect hone tak wait karo
-      setStatusMsg(`Connect to "${selSSID}" — waiting...`);
-      console.log("4. Polling for:", selSSID);
-
-      try {
-        await pollForConnection(selSSID, { interval: 2000, timeout: 60000 });
-        console.log("5. Connected to second WiFi");
-        setBusy(false);
-        setModal("");
-        navigation.navigate("DeviceConfig");
-      } catch (pollErr) {
-        setBusy(false);
-        setModal("");
-        Alert.alert(
-          "Not Connected",
-          `"${selSSID}" se connect nahi hua. Manually connect karke dobara try karein.`
-        );
-      }
-    } catch (e) {
-      // Sirf resolveEspIp fail hone par (device na mila)
       setBusy(false);
-      setModal("");
-      console.log("ERROR NAME:", e.name);
-      console.log("ERROR MESSAGE:", e.message);
-      console.log("FULL ERROR:", e);
-      Alert.alert("Error", e.message || "Unable to communicate with ESP32.");
+
+      if (!result.success) {
+        Alert.alert("Error", result.message);
+        return;
+      }
+
+      Alert.alert(
+        "Success",
+        "New WiFi credentials sent successfully."
+      );
+
+      navigation.navigate("Home");
+
+    } catch (e) {
+
+      setBusy(false);
+
+      Alert.alert("Error", e.message);
     }
   };
+
+
+  // const changeWifi = async () => {
+  //   if (newPw.length < 8) {
+  //     Alert.alert("Error", "Minimum 8 characters");
+  //     return;
+  //   }
+
+  //   // Android: SSID padhne ke liye location permission chahiye
+  //   if (Platform.OS === "android") {
+  //     await PermissionsAndroid.request(
+  //       PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+  //     );
+  //   }
+
+  //   setBusy(true);
+  //   setModal("loading");
+  //   setStatusMsg("Finding device...");
+
+  //   try {
+  //     console.log("1. Starting resolveEspIp");
+  //     const ip = await resolveEspIp();
+  //     console.log("2. IP Found:", ip);
+
+  //     setStatusMsg("Sending WiFi credentials...");
+  //     console.log("3. Sending to:", `http://${ip}/set_wifi`);
+
+  //     // Credentials bhejo. ESP switch hote hi connection drop karega,
+  //     // isliye response nahi aayega — error ko ignore karo.
+  //     const controller = new AbortController();
+  //     const timeoutId = setTimeout(() => controller.abort(), 4000);
+  //     try {
+  //       await fetch(`http://${ip}/set_wifi`, {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/x-www-form-urlencoded" },
+  //         body: `ssid=${encodeURIComponent(selSSID)}&password=${encodeURIComponent(newPw)}`,
+  //         signal: controller.signal,
+  //       });
+  //     } catch (sendErr) {
+  //       console.log("Expected drop:", sendErr.name, sendErr.message);
+  //     } finally {
+  //       clearTimeout(timeoutId);
+  //     }
+
+  //     // Polling: second WiFi se connect hone tak wait karo
+  //     setStatusMsg(`Connect to "${selSSID}" — waiting...`);
+  //     console.log("4. Polling for:", selSSID);
+
+  //     try {
+  //       await pollForConnection(selSSID, { interval: 2000, timeout: 60000 });
+  //       console.log("5. Connected to second WiFi");
+  //       setBusy(false);
+  //       setModal("");
+  //       navigation.navigate("DeviceConfig");
+  //     } catch (pollErr) {
+  //       setBusy(false);
+  //       setModal("");
+  //       Alert.alert(
+  //         "Not Connected",
+  //         `"${selSSID}" se connect nahi hua. Manually connect karke dobara try karein.`
+  //       );
+  //     }
+  //   } catch (e) {
+  //     // Sirf resolveEspIp fail hone par (device na mila)
+  //     setBusy(false);
+  //     setModal("");
+  //     console.log("ERROR NAME:", e.name);
+  //     console.log("ERROR MESSAGE:", e.message);
+  //     console.log("FULL ERROR:", e);
+  //     Alert.alert("Error", e.message || "Unable to communicate with ESP32.");
+  //   }
+  // };
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <TouchableOpacity onPress={() => navigation.goBack()}
-        style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 }}>
-        <Text style={{ fontSize: 16, color: '#1D9E75', fontWeight: '500' }}>‹ Back</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.7} style={styles.backRow}>
+        <Feather name="chevron-left" size={18} color={colors.subText} />
+        <Text style={styles.backText}>Back</Text>
       </TouchableOpacity>
 
-      <View style={{ flex: 1, padding: 24, justifyContent: 'center' }}>
-        <View style={{ backgroundColor: colors.card, borderRadius: 24, padding: 24, elevation: 4 }}>
-          <Text style={{ fontSize: 28, fontWeight: '700', textAlign: 'center', color: colors.text }}>Change WiFi</Text>
-          <Text style={{ marginTop: 12, textAlign: 'center', color: colors.subText }}>
+      <View style={styles.centerWrap}>
+        <Animated.View
+          style={[
+            styles.header,
+            { opacity: headerFade, transform: [{ translateY: headerSlide }] },
+          ]}
+        >
+          <Animated.Text style={[styles.eyebrow, { opacity: eyebrowFade }]}>
+            DEVICE SETUP
+          </Animated.Text>
+          <Text style={styles.heading}>Change WiFi</Text>
+          <Text style={styles.subtitle}>
             Select a new 2.4GHz network for your ESP32 device.
           </Text>
+          <Animated.View style={[styles.accentLine, { width: accentLineWidth }]} />
+        </Animated.View>
 
-          {/* <View style={{
-            marginTop: 20, padding: 12, borderRadius: 10,
-            backgroundColor: espIP ? '#E1F5EE' : '#FEF2F2',
-            flexDirection: 'row', alignItems: 'center', gap: 8,
-          }}>
-            <Text>{espIP ? '🟢' : '🔴'}</Text>
-            <Text style={{ fontSize: 13, color: espIP ? '#0F6E56' : '#B91C1C' }}>
-              {espIP ? `ESP32 found (${espIP})` : 'Searching for ESP32...'}
+        <Animated.View style={{ opacity: cardFade, transform: [{ translateY: cardSlide }], width: '100%' }}>
+          <View style={styles.card}>
+            <View style={styles.cardIconWrap}>
+              <Feather name="wifi" size={22} color={colors.text} />
+            </View>
+            <Text style={styles.cardTitle}>Ready to switch networks</Text>
+            <Text style={styles.cardBody}>
+              We'll scan for nearby 2.4GHz networks your ESP32 can join.
             </Text>
-          </View> */}
 
-          <TouchableOpacity onPress={scanWifi} disabled={busy}
-            style={{
-              marginTop: 20, paddingVertical: 16, borderRadius: 14, alignItems: 'center',
-              backgroundColor: busy ? (isDark ? '#374151' : '#CBD5E1') : '#1D9E75',
-            }}>
-            <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Select WiFi Network</Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity
+              onPress={scanWifi}
+              disabled={busy}
+              activeOpacity={0.85}
+              style={[styles.button, busy && styles.buttonDisabled]}
+            >
+              <Feather name="search" size={16} color="#fff" />
+              <Text style={styles.buttonText}>Select WiFi Network</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
       </View>
 
-      <Modal visible={modal === 'loading'} transparent>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
-          <View style={{ backgroundColor: colors.card, borderRadius: 20, padding: 32, alignItems: 'center', marginHorizontal: 40 }}>
-            <ActivityIndicator size="large" color="#1D9E75" />
-            <Text style={{ marginTop: 16, fontSize: 16, fontWeight: '600', color: colors.text }}>{statusMsg}</Text>
+      {/* ---- Loading modal ---- */}
+      <Modal visible={modal === 'loading'} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <View style={styles.loadingCard}>
+            <ActivityIndicator size="large" color={colors.text} />
+            <Text style={styles.loadingText}>{statusMsg}</Text>
           </View>
         </View>
       </Modal>
 
+      {/* ---- WiFi list modal ---- */}
       <Modal visible={modal === 'wifi'} animationType="slide" transparent onRequestClose={() => setModal('')}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '80%' }}>
-            <View style={{ width: 40, height: 4, backgroundColor: colors.border, borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 16 }} />
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 12 }}>
-              <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Select 2.4GHz WiFi</Text>
-              <TouchableOpacity onPress={() => setModal('')}><Text style={{ fontSize: 16, color: colors.subText, padding: 8 }}>✕</Text></TouchableOpacity>
+        <View style={styles.sheetOverlay}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeaderRow}>
+              <Text style={styles.sheetTitle}>Select 2.4GHz WiFi</Text>
+              <TouchableOpacity onPress={() => setModal('')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Feather name="x" size={20} color={colors.subText} />
+              </TouchableOpacity>
             </View>
+
             {busy ? (
-              <View style={{ alignItems: 'center', paddingVertical: 50 }}>
-                <ActivityIndicator size="large" color="#1D9E75" /><Text style={{ marginTop: 12, color: colors.subText }}>Scanning...</Text>
+              <View style={styles.sheetLoadingWrap}>
+                <ActivityIndicator size="large" color={colors.text} />
+                <Text style={styles.sheetLoadingText}>Scanning...</Text>
               </View>
             ) : (
-              <FlatList data={wifiList} keyExtractor={(_, i) => i.toString()} style={{ maxHeight: 400 }}
-                ListEmptyComponent={<View style={{ alignItems: 'center', paddingVertical: 50 }}>
-                  <Text style={{ color: colors.subText }}>No 2.4GHz networks</Text>
-                  <TouchableOpacity onPress={scanWifi} style={{ marginTop: 16, backgroundColor: '#1D9E75', paddingVertical: 10, paddingHorizontal: 24, borderRadius: 8 }}>
-                    <Text style={{ color: '#fff', fontWeight: '600' }}>Scan Again</Text></TouchableOpacity></View>}
+              <FlatList
+                data={wifiList}
+                keyExtractor={(_, i) => i.toString()}
+                style={{ maxHeight: 420 }}
+                contentContainerStyle={{ paddingBottom: 12 }}
+                ListEmptyComponent={
+                  <View style={styles.sheetEmptyWrap}>
+                    <Feather name="wifi-off" size={26} color={colors.subText} />
+                    <Text style={styles.sheetEmptyText}>No 2.4GHz networks found</Text>
+                    <TouchableOpacity onPress={scanWifi} activeOpacity={0.85} style={[styles.button, { marginTop: 16 }]}>
+                      <Feather name="refresh-cw" size={16} color="#fff" />
+                      <Text style={styles.buttonText}>Scan Again</Text>
+                    </TouchableOpacity>
+                  </View>
+                }
                 renderItem={({ item }) => (
-                  <TouchableOpacity onPress={() => pickWifi(item.SSID)}
-                    style={{ flexDirection: 'row', alignItems: 'center', padding: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 10 }}>
-                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#1D9E75' }} />
-                    <View style={{ flex: 1 }}><Text style={{ fontSize: 15, fontWeight: '500', color: colors.text }}>{item.SSID}</Text>
-                      <Text style={{ fontSize: 12, color: colors.subText }}>2.4 GHz</Text></View>
-                    <Text style={{ color: colors.subText, fontSize: 20 }}>›</Text>
-                  </TouchableOpacity>)} />
+                  <TouchableOpacity onPress={() => pickWifi(item.SSID)} activeOpacity={0.7} style={styles.wifiRow}>
+                    <View style={styles.wifiIconWrap}>
+                      <Feather name="wifi" size={18} color={colors.text} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.wifiSsid} numberOfLines={1}>{item.SSID}</Text>
+                      <Text style={styles.wifiMeta}>2.4 GHz</Text>
+                    </View>
+                    <Feather name="chevron-right" size={18} color={colors.subText} />
+                  </TouchableOpacity>
+                )}
+              />
             )}
           </View>
         </View>
       </Modal>
 
+      {/* ---- Password modal ---- */}
       <Modal visible={modal === 'password'} animationType="slide" transparent onRequestClose={() => setModal('')}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}>
-          <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20 }}>
-            <View style={{ width: 40, height: 4, backgroundColor: colors.border, borderRadius: 2, alignSelf: 'center', marginTop: 10, marginBottom: 16 }} />
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 12 }}>
-              <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text }}>Enter Password</Text>
-              <TouchableOpacity onPress={() => setModal('')}><Text style={{ fontSize: 16, color: colors.subText, padding: 8 }}>✕</Text></TouchableOpacity>
-            </View>
-            <View style={{ paddingHorizontal: 16, paddingBottom: 30 }}>
-              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.subText, marginBottom: 6 }}>SSID</Text>
-              <TextInput style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, fontSize: 15, backgroundColor: isDark ? '#161616' : '#f5f5f5', color: colors.subText, marginBottom: 16 }}
-                value={selSSID} editable={false} />
-              <Text style={{ fontSize: 12, fontWeight: '600', color: colors.subText, marginBottom: 6 }}>PASSWORD</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 20 }}>
-                <TextInput style={{ flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: 10, padding: 12, fontSize: 15, color: colors.text }}
-                  placeholder="Enter password" placeholderTextColor={colors.subText} secureTextEntry={!showPw} value={newPw} onChangeText={setNewPw} autoFocus />
-                <TouchableOpacity style={{ padding: 10 }} onPress={() => setShowPw(!showPw)}>
-                  <Text style={{ fontSize: 18 }}>{showPw ? '🙈' : '👁️'}</Text></TouchableOpacity>
-              </View>
-              <TouchableOpacity onPress={changeWifi} disabled={busy}
-                style={{ backgroundColor: '#1D9E75', paddingVertical: 14, borderRadius: 10, alignItems: 'center' }}>
-                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>Change WiFi</Text>
+        <View style={styles.sheetOverlay}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.sheetHeaderRow}>
+              <Text style={styles.sheetTitle}>Enter Password</Text>
+              <TouchableOpacity onPress={() => setModal('')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Feather name="x" size={20} color={colors.subText} />
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setModal('')}
-                style={{ paddingVertical: 14, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: colors.border, marginTop: 10 }}>
-                <Text style={{ fontSize: 15, fontWeight: '500', color: colors.text }}>Cancel</Text>
+            </View>
+
+            <View style={styles.sheetBody}>
+              <Text style={styles.fieldLabel}>SSID</Text>
+              <View style={styles.ssidDisplay}>
+                <Feather name="wifi" size={15} color={colors.subText} />
+                <Text style={styles.ssidDisplayText} numberOfLines={1}>{selSSID}</Text>
+              </View>
+
+              <Text style={[styles.fieldLabel, { marginTop: 18 }]}>PASSWORD</Text>
+              <View style={styles.passwordField}>
+                <Feather name="lock" size={16} color={colors.subText} style={{ marginRight: 10 }} />
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Enter password"
+                  placeholderTextColor={colors.subText}
+                  secureTextEntry={!showPw}
+                  value={newPw}
+                  onChangeText={setNewPw}
+                  autoFocus
+                />
+                <TouchableOpacity onPress={() => setShowPw(!showPw)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <Feather name={showPw ? 'eye-off' : 'eye'} size={18} color={colors.subText} />
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                onPress={changeWifi}
+                disabled={busy}
+                activeOpacity={0.85}
+                style={[styles.button, styles.sheetButtonSpacing, busy && styles.buttonDisabled]}
+              >
+                <Feather name="check" size={16} color="#fff" />
+                <Text style={styles.buttonText}>Change WiFi</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setModal('')}
+                activeOpacity={0.85}
+                style={[styles.button, styles.cancelButton, { marginTop: 10 }]}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -273,3 +402,303 @@ export default function ResetwifiNetwork({ navigation }) {
     </SafeAreaView>
   );
 }
+
+const createStyles = (colors) => StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+
+  backRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 4,
+    alignSelf: 'flex-start',
+  },
+  backText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.subText,
+  },
+
+  centerWrap: {
+    flex: 1,
+    paddingHorizontal: 24,
+    justifyContent: 'center',
+  },
+
+  header: {
+    marginBottom: 28,
+  },
+  eyebrow: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.subText,
+    letterSpacing: 1,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+  },
+  heading: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.6,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: colors.subText,
+    marginTop: 8,
+    lineHeight: 21,
+    maxWidth: 320,
+  },
+  accentLine: {
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.subText,
+    marginTop: 18,
+    opacity: 0.6,
+  },
+
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: '#0B0D12',
+    shadowOpacity: 0.06,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 3,
+  },
+  cardIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(120,120,128,0.14)',
+    marginBottom: 16,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.3,
+    marginBottom: 6,
+  },
+  cardBody: {
+    fontSize: 14,
+    color: colors.subText,
+    lineHeight: 20,
+    marginBottom: 22,
+  },
+
+  // Buttons — monochromatic system matching DeviceConfig
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    width: '100%',
+    backgroundColor: '#111111',
+    shadowColor: '#0B0D12',
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
+  },
+  buttonDisabled: {
+    opacity: 0.5,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.1,
+  },
+  cancelButton: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  cancelButtonText: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  // Loading modal
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingCard: {
+    backgroundColor: colors.card,
+    borderRadius: 22,
+    paddingVertical: 32,
+    paddingHorizontal: 28,
+    alignItems: 'center',
+    marginHorizontal: 40,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+    textAlign: 'center',
+  },
+
+  // Bottom sheets
+  sheetOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: colors.card,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    maxHeight: '85%',
+    borderTopWidth: 1,
+    borderColor: colors.border,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: colors.border,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  sheetHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 8,
+  },
+  sheetTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.3,
+  },
+
+  sheetLoadingWrap: {
+    alignItems: 'center',
+    paddingVertical: 56,
+  },
+  sheetLoadingText: {
+    marginTop: 14,
+    fontSize: 14,
+    color: colors.subText,
+    fontWeight: '500',
+  },
+  sheetEmptyWrap: {
+    alignItems: 'center',
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  sheetEmptyText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: colors.subText,
+    textAlign: 'center',
+  },
+
+  wifiRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  wifiIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(120,120,128,0.14)',
+  },
+  wifiSsid: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+    letterSpacing: -0.1,
+  },
+  wifiMeta: {
+    fontSize: 12,
+    color: colors.subText,
+    marginTop: 2,
+    fontWeight: '500',
+  },
+
+  sheetBody: {
+    paddingHorizontal: 20,
+    paddingBottom: 28,
+    paddingTop: 4,
+  },
+  fieldLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.subText,
+    letterSpacing: 0.8,
+    marginBottom: 8,
+  },
+  ssidDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+  },
+  ssidDisplayText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.subText,
+    flexShrink: 1,
+  },
+  passwordField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
+    backgroundColor: colors.card,
+  },
+  passwordInput: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+    color: colors.text,
+    paddingVertical: 12,
+  },
+  sheetButtonSpacing: {
+    marginTop: 24,
+  },
+});

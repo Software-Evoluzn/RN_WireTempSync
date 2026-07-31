@@ -9,6 +9,7 @@ from routes.auth import auth
 from routes.product import product
 from routes.telemetry import telemetry
 from routes.wifi import wifi_bp
+from routes.telemetry_export import export_bp
 
 from mqtt_service import start_mqtt, init_app
 
@@ -30,6 +31,7 @@ app.register_blueprint(auth)
 app.register_blueprint(product)
 app.register_blueprint(telemetry)
 app.register_blueprint(wifi_bp)
+app.register_blueprint(export_bp)
 
 @app.route("/")
 def home():

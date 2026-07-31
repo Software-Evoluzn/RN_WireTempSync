@@ -210,4 +210,4 @@ def start_mqtt():
 
 
 def publish(topic, message):
-    client.publish(topic, json.dumps(message))
+    client.publish(topic, message)

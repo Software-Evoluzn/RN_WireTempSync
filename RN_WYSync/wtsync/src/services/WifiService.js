@@ -1,4 +1,4 @@
-import {Alert, Linking} from 'react-native';
+import { Alert, Linking } from 'react-native';
 import WifiManager from 'react-native-wifi-reborn';
 
 import IP_ADDRESS from '../services/ipconfig'
@@ -7,7 +7,7 @@ const BASE_URL = `http://${IP_ADDRESS}:5006`;
 
 
 export const verifyDeviceWifi = async (deviceId) => {
-   console.log(`${BASE_URL}/get-device-wifi/${deviceId}`);
+  console.log(`${BASE_URL}/get-device-wifi/${deviceId}`);
   try {
 
     // Fetch WiFi from backend
@@ -54,7 +54,14 @@ export const verifyDeviceWifi = async (deviceId) => {
       return false;
     }
 
-    return true;
+    return {
+      success: true,
+      deviceId: result.device_id,
+      firebaseUid: result.firebase_uid,
+      ssid: result.ssid
+
+
+    }
 
   } catch (error) {
 
@@ -68,3 +75,46 @@ export const verifyDeviceWifi = async (deviceId) => {
     return false;
   }
 };
+
+
+export const resetDeviceWifi = async (deviceId) => {
+
+  const response = await fetch(`${BASE_URL}/reset-device-wifi`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      device_id: deviceId,
+    }),
+  });
+
+  return await response.json();
+};
+
+
+export const changeDeviceWifi = async ({
+  deviceId,
+  firebaseUid,
+  ssid,
+  password
+}) => {
+
+  const response = await fetch(
+    `${BASE_URL}/change-device-wifi`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        device_id: deviceId,
+        firebase_uid: firebaseUid,
+        ssid,
+        password
+      })
+    }
+  );
+
+  return await response.json();
+}

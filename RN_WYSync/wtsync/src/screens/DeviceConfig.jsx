@@ -1,12 +1,12 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   View, Text, FlatList, TouchableOpacity, PermissionsAndroid,
-  Platform, Alert, Linking, ActivityIndicator, RefreshControl,
+  Platform, Alert, Linking, ActivityIndicator, RefreshControl, StyleSheet, Animated,
 } from 'react-native';
 import WifiManager from 'react-native-wifi-reborn';
-import styles from '../styles/WiFiListStyles';
 import Zeroconf from 'react-native-zeroconf';
+import Feather from 'react-native-vector-icons/Feather';
 
 import { resolveEspIp } from '../utils/EspDiscovery';
 import { useAppTheme } from '../services/theme';
@@ -51,6 +51,7 @@ export default function DeviceConfig({ navigation, route }) {
   // Follows Android system Light/Dark mode automatically via
   // useColorScheme() inside useAppTheme(). No manual toggle.
   const { colors, isDark } = useAppTheme();
+  const styles = createStyles(colors);
 
   const [networks, setNetworks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +61,44 @@ export default function DeviceConfig({ navigation, route }) {
   const [resetting, setResetting] = useState(false);
 
   const [espOnline, setEspOnline] = useState(false);
+
+  // ── Visual-only animation values (new) ────────────────
+  // Mirrors HomeScreen's entrance + pulse treatment. These do not
+  // affect any business logic, data flow, or navigation — purely
+  // presentational, and run independently of the effects below.
+  const headerFade = useRef(new Animated.Value(0)).current;
+  const headerSlide = useRef(new Animated.Value(10)).current;
+  const accentLineWidth = useRef(new Animated.Value(0)).current;
+  const accentOpacity = useRef(new Animated.Value(0.4)).current;
+  const eyebrowFade = useRef(new Animated.Value(0)).current;
+  const listFade = useRef(new Animated.Value(0)).current;
+  const listSlide = useRef(new Animated.Value(14)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(headerFade, { toValue: 1, duration: 550, useNativeDriver: true }),
+      Animated.timing(headerSlide, { toValue: 0, duration: 550, useNativeDriver: true }),
+      Animated.timing(eyebrowFade, { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.timing(accentLineWidth, { toValue: 56, duration: 700, delay: 200, useNativeDriver: false }),
+      Animated.timing(listFade, { toValue: 1, duration: 600, delay: 150, useNativeDriver: true }),
+      Animated.timing(listSlide, { toValue: 0, duration: 600, delay: 150, useNativeDriver: true }),
+    ]).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(accentOpacity, { toValue: 1, duration: 2400, useNativeDriver: true }),
+        Animated.timing(accentOpacity, { toValue: 0.4, duration: 2400, useNativeDriver: true }),
+      ])
+    ).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.4, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
 
   // -----------------------------------------------------------------
   // AUTO-CONNECT MODE (new)
@@ -373,16 +412,27 @@ export default function DeviceConfig({ navigation, route }) {
       <TouchableOpacity
         style={[
           styles.networkRow,
-          { backgroundColor: colors.card, borderColor: colors.border },
           isConn && { opacity: 0.6 },
         ]}
-        onPress={() => connectToESP(item)} disabled={connecting} activeOpacity={0.7}>
-        <View style={[styles.signalDot, { backgroundColor: signal.color }]} />
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.ssidText, { color: colors.text }]}>{item.SSID}</Text>
-          <Text style={[styles.metaText, { color: colors.subText }]}>ESP32 Device · {signal.label}</Text>
+        onPress={() => connectToESP(item)} disabled={connecting} activeOpacity={0.85}>
+        <View style={[styles.deviceIconWrap, { backgroundColor: `${signal.color}1A` }]}>
+          <Feather name="wifi" size={20} color={signal.color} />
         </View>
-        {isConn ? <ActivityIndicator size="small" color="#1D9E75" /> : <Text style={[styles.chevron, { color: colors.subText }]}>›</Text>}
+        <View style={{ flex: 1 }}>
+          <Text style={styles.ssidText} numberOfLines={1}>{item.SSID}</Text>
+          <View style={styles.qualityRow}>
+            <Animated.View
+              style={[
+                styles.signalDot,
+                { backgroundColor: signal.color, transform: [{ scale: pulseAnim }] },
+              ]}
+            />
+            <Text style={styles.metaText}>ESP32 Device · {signal.label}</Text>
+          </View>
+        </View>
+        {isConn
+          ? <ActivityIndicator size="small" color={colors.text} />
+          : <Feather name="chevron-right" size={20} color={colors.subText} />}
       </TouchableOpacity>
     );
   };
@@ -391,37 +441,49 @@ export default function DeviceConfig({ navigation, route }) {
   const renderEmpty = () => {
     if (loading) return null;
     return (
-      <View style={{ alignItems: 'center', marginTop: 60, paddingHorizontal: 20 }}>
-        <Text style={{ fontSize: 48, marginBottom: 16 }}>📡</Text>
-        <Text style={{ fontSize: 16, fontWeight: '500', color: colors.text, marginBottom: 8 }}>
+      <View style={styles.emptyWrap}>
+        <View style={styles.iconWrap}>
+          <Feather name="wifi-off" size={30} color={colors.text} />
+        </View>
+
+        <Text style={styles.emptyTitle}>
           No ESP32 devices found
         </Text>
-        <Text style={{ fontSize: 14, color: colors.subText, textAlign: 'center', lineHeight: 20, marginBottom: 24 }}>
+
+        <Text style={styles.emptyDescription}>
           Device not in AP mode.first scan the device or reset the device remotely.
         </Text>
 
-        <TouchableOpacity onPress={checkPermissionsAndScan}
-          style={{ backgroundColor: '#1D9E75', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 10, marginBottom: 12, width: '100%', alignItems: 'center' }}>
-          <Text style={{ color: '#fff', fontSize: 15, fontWeight: '600' }}>Scan Again</Text>
+        <TouchableOpacity onPress={checkPermissionsAndScan} activeOpacity={0.85}
+          style={styles.button}>
+          <Feather name="refresh-cw" size={16} color="#fff" />
+          <Text style={styles.buttonText}>Scan Again</Text>
         </TouchableOpacity>
 
 
         {/* ── Change WiFi button (device already on WiFi) ── */}
-        <TouchableOpacity onPress={() => navigation.navigate('ResetwifiNetwork')}
-          style={{ backgroundColor: '#2563EB', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 10, marginBottom: 12, width: '100%', alignItems: 'center' }}>
-          <Text style={{ color: '#fff', fontSize: 15, fontWeight: '600' }}>Change WiFi</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('ResetwifiNetwork')} activeOpacity={0.85}
+          style={[styles.button, styles.buttonSecondary]}>
+          <Feather name="wifi" size={16} color={colors.text} />
+          <Text style={styles.buttonSecondaryText}>Change WiFi</Text>
         </TouchableOpacity>
 
         {/* ── Reset button when device not in AP mode ── */}
-        <TouchableOpacity onPress={resetDeviceRemote} disabled={resetting}
-          style={{ backgroundColor: '#DC2626', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 10, width: '100%', alignItems: 'center' }}>
-          {resetting ? <ActivityIndicator color="#fff" /> :
-            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '600' }}>Reset Device (abc.local)</Text>}
+        <TouchableOpacity onPress={resetDeviceRemote} disabled={resetting} activeOpacity={0.85}
+          style={[styles.button, styles.buttonDestructive]}>
+          {resetting
+            ? <ActivityIndicator color="#B91C1C" />
+            : (
+              <>
+                <Feather name="power" size={16} color="#B91C1C" />
+                <Text style={styles.buttonDestructiveText}>Reset Device (abc.local)</Text>
+              </>
+            )}
         </TouchableOpacity>
 
 
 
-        <Text style={{ marginTop: 12, fontSize: 12, color: colors.subText, textAlign: 'center' }}>
+        <Text style={styles.hintText}>
           For reset the Device  your phone and esp32 is on same wifi
         </Text>
       </View>
@@ -437,56 +499,69 @@ export default function DeviceConfig({ navigation, route }) {
     return (
       <View style={[styles.container, { justifyContent: 'center', backgroundColor: colors.background }]}>
         {(autoStatus === 'scanning' || autoStatus === 'connecting') && (
-          <View style={{ alignItems: 'center', paddingHorizontal: 24 }}>
-            <ActivityIndicator size="large" color="#1D9E75" />
-            <Text style={{ marginTop: 16, fontSize: 16, fontWeight: '600', color: colors.text, textAlign: 'center' }}>
+          <View style={styles.autoWrap}>
+            <View style={styles.spinnerWrap}>
+              <ActivityIndicator size="large" color={colors.text} />
+            </View>
+            <Text style={styles.autoStatusTitle}>
               {autoStatus === 'connecting' ? 'Connecting to device...' : 'Looking for your device...'}
             </Text>
             {!!expectedSSID && (
-              <Text style={{ marginTop: 6, fontSize: 13, color: colors.subText, textAlign: 'center' }}>
-                {expectedSSID}
-              </Text>
+              <View style={styles.ssidPill}>
+                <Feather name="wifi" size={12} color={colors.subText} />
+                <Text style={styles.autoStatusSub}>
+                  {expectedSSID}
+                </Text>
+              </View>
             )}
           </View>
         )}
 
         {autoStatus === 'not_found' && (
-          <View style={{ alignItems: 'center', paddingHorizontal: 24 }}>
-            <Text style={{ fontSize: 48, marginBottom: 16 }}>📡</Text>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, textAlign: 'center', marginBottom: 8 }}>
+          <View style={styles.autoWrap}>
+            <View style={styles.iconWrap}>
+              <Feather name="wifi-off" size={30} color={colors.text} />
+            </View>
+            <Text style={styles.emptyTitle}>
               Device not found.
             </Text>
-            <Text style={{ fontSize: 14, color: colors.subText, textAlign: 'center', lineHeight: 20, marginBottom: 24 }}>
+            <Text style={styles.emptyDescription}>
               Please power on the device or press Scan Again.
             </Text>
 
-            <TouchableOpacity onPress={handleAutoScanAgain}
-              style={{ backgroundColor: '#1D9E75', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 10, marginBottom: 12, width: '100%', alignItems: 'center' }}>
-              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '600' }}>Scan Again</Text>
+            <TouchableOpacity onPress={handleAutoScanAgain} activeOpacity={0.85}
+              style={styles.button}>
+              <Feather name="refresh-cw" size={16} color="#fff" />
+              <Text style={styles.buttonText}>Scan Again</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleAutoCancel}
-              style={{ backgroundColor: isDark ? '#2A2A2A' : '#EDEDED', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 10, width: '100%', alignItems: 'center' }}>
-              <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>Cancel</Text>
+            <TouchableOpacity onPress={handleAutoCancel} activeOpacity={0.85}
+              style={[styles.button, styles.cancelButton]}>
+              <Feather name="x" size={16} color={colors.text} />
+              <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {autoStatus === 'failed' && (
-          <View style={{ alignItems: 'center', paddingHorizontal: 24 }}>
-            <Text style={{ fontSize: 48, marginBottom: 16 }}>⚠️</Text>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, textAlign: 'center', marginBottom: 24 }}>
+          <View style={styles.autoWrap}>
+            <View style={[styles.iconWrap, { backgroundColor: '#FDF0F0' }]}>
+              <Feather name="alert-triangle" size={30} color="#EF4444" />
+            </View>
+            <Text style={[styles.emptyTitle, { marginBottom: 24 }]}>
               Unable to connect to device.
             </Text>
 
-            <TouchableOpacity onPress={handleAutoScanAgain}
-              style={{ backgroundColor: '#1D9E75', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 10, marginBottom: 12, width: '100%', alignItems: 'center' }}>
-              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '600' }}>Retry</Text>
+            <TouchableOpacity onPress={handleAutoScanAgain} activeOpacity={0.85}
+              style={styles.button}>
+              <Feather name="refresh-cw" size={16} color="#fff" />
+              <Text style={styles.buttonText}>Retry</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={handleAutoCancel}
-              style={{ backgroundColor: isDark ? '#2A2A2A' : '#EDEDED', paddingVertical: 12, paddingHorizontal: 32, borderRadius: 10, width: '100%', alignItems: 'center' }}>
-              <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>Cancel</Text>
+            <TouchableOpacity onPress={handleAutoCancel} activeOpacity={0.85}
+              style={[styles.button, styles.cancelButton]}>
+              <Feather name="x" size={16} color={colors.text} />
+              <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -499,13 +574,27 @@ export default function DeviceConfig({ navigation, route }) {
   // -----------------------------------------------------------------
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Text style={[styles.heading, { color: colors.text }]}>ESP32 Setup</Text>
-      <Text style={[styles.subtitle, { color: colors.subText }]}>Select your ESP32 device to begin setup.</Text>
+      <Animated.View
+        style={[
+          styles.header,
+          { opacity: headerFade, transform: [{ translateY: headerSlide }] },
+        ]}
+      >
+        <Animated.Text style={[styles.eyebrow, { opacity: eyebrowFade }]}>
+          DEVICE SETUP
+        </Animated.Text>
+        <Text style={styles.heading}>ESP32 Setup</Text>
+        <Text style={styles.subtitle}>Select your ESP32 device to begin setup.</Text>
+        <Animated.View
+          style={[styles.accentLine, { width: accentLineWidth, opacity: accentOpacity }]}
+        />
+      </Animated.View>
 
       {!loading && networks.length > 0 && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-          <View style={{ backgroundColor: isDark ? '#123328' : '#E1F5EE', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 }}>
-            <Text style={{ fontSize: 11, fontWeight: '600', color: '#0F6E56' }}>
+        <View style={styles.countPillWrap}>
+          <View style={styles.countPill}>
+            <Feather name="wifi" size={12} color={colors.subText} />
+            <Text style={styles.countPillText}>
               {networks.length} device{networks.length !== 1 ? 's' : ''} found
             </Text>
           </View>
@@ -513,16 +602,308 @@ export default function DeviceConfig({ navigation, route }) {
       )}
 
       {loading ? (
-        <View style={{ marginTop: 60, alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#1D9E75" />
-          <Text style={{ marginTop: 12, color: colors.subText, fontSize: 14 }}>Scanning for ESP32 devices...</Text>
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={colors.text} />
+          <Text style={styles.loadingText}>Scanning for ESP32 devices...</Text>
         </View>
       ) : (
-        <FlatList data={networks} keyExtractor={(item, i) => `${item.SSID}-${i}`}
-          renderItem={renderItem} ListEmptyComponent={renderEmpty}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1D9E75" colors={['#1D9E75']} />}
-          contentContainerStyle={networks.length === 0 ? { flex: 1 } : { paddingBottom: 40 }} />
+        <Animated.View
+          style={{ flex: 1, opacity: listFade, transform: [{ translateY: listSlide }] }}
+        >
+          <FlatList data={networks} keyExtractor={(item, i) => `${item.SSID}-${i}`}
+            renderItem={renderItem} ListEmptyComponent={renderEmpty}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.text} colors={[colors.text]} />}
+            contentContainerStyle={networks.length === 0 ? { flex: 1 } : { paddingBottom: 40 }} />
+        </Animated.View>
       )}
     </View>
   );
 }
+
+const createStyles = (colors) => StyleSheet.create({
+  container: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 8,
+  },
+
+  header: {
+    paddingTop: 12,
+    marginBottom: 32,
+  },
+  eyebrow: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.subText,
+    letterSpacing: 1,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+  },
+  heading: {
+    fontSize: 30,
+    fontWeight: '700',
+    color: colors.text,
+    letterSpacing: -0.6,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: colors.subText,
+    marginTop: 8,
+    lineHeight: 21,
+    maxWidth: 300,
+  },
+  accentLine: {
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: colors.subText,
+    marginTop: 18,
+  },
+
+  countPillWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 16,
+  },
+  countPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  countPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+    color: colors.subText,
+  },
+
+  loadingWrap: {
+    marginTop: 80,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 14,
+    color: colors.subText,
+    fontWeight: '500',
+  },
+
+  // Network list rows
+  networkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: 22,
+    padding: 18,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: '#0B0D12',
+    shadowOpacity: 0.05,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+  },
+  deviceIconWrap: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  ssidText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: colors.text,
+    letterSpacing: -0.2,
+  },
+  qualityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  metaText: {
+    fontSize: 13,
+    color: colors.subText,
+    fontWeight: '500',
+  },
+  signalDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    marginRight: 7,
+  },
+
+  // Empty / status states
+  emptyWrap: {
+    alignItems: 'center',
+    marginTop: 32,
+    paddingHorizontal: 28,
+    paddingVertical: 40,
+    backgroundColor: colors.card,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: '#0B0D12',
+    shadowOpacity: 0.05,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+  },
+  iconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'rgba(120,120,128,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 22,
+  },
+  spinnerWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'rgba(120,120,128,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 22,
+  },
+  emptyTitle: {
+    fontSize: 19,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 10,
+    textAlign: 'center',
+    letterSpacing: -0.3,
+  },
+  emptyDescription: {
+    fontSize: 14,
+    color: colors.subText,
+    textAlign: 'center',
+    lineHeight: 21,
+    marginBottom: 28,
+    maxWidth: 260,
+  },
+  hintText: {
+    marginTop: 16,
+    fontSize: 12,
+    color: colors.subText,
+    textAlign: 'center',
+    lineHeight: 17,
+  },
+
+  // Buttons — monochromatic system: rich-black primary, bordered
+  // neutral secondary, bordered muted-red destructive. No saturated
+  // brand colors on buttons.
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    marginBottom: 12,
+    width: '100%',
+    backgroundColor: '#111111',
+    shadowColor: '#0B0D12',
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.1,
+  },
+  buttonSecondary: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  buttonSecondaryText: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.1,
+  },
+  buttonDestructive: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: 'rgba(185,28,28,0.28)',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  buttonDestructiveText: {
+    color: '#B91C1C',
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.1,
+  },
+  cancelButton: {
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  cancelButtonText: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  // Auto-connect status screens
+  autoWrap: {
+    alignItems: 'center',
+    paddingHorizontal: 28,
+    paddingVertical: 40,
+    backgroundColor: colors.card,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: '#0B0D12',
+    shadowOpacity: 0.05,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 2,
+  },
+  autoStatusTitle: {
+    marginTop: 4,
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
+    textAlign: 'center',
+    letterSpacing: -0.3,
+  },
+  ssidPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  autoStatusSub: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: colors.subText,
+    letterSpacing: 0.1,
+  },
+});

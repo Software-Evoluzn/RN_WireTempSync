@@ -2,6 +2,8 @@ from flask import Blueprint, request, jsonify
 from models.DeviceWifi import DeviceWifi
 from database.db import db
 
+from mqtt_service import publish
+
 wifi_bp = Blueprint("wifi", __name__)
 
 @wifi_bp.route("/save-device-wifi", methods=["POST"])
@@ -67,6 +69,91 @@ def get_device_wifi(device_id):
 
     return jsonify({
         "success": True,
-        "ssid": wifi.ssid
+        "device_id": wifi.device_id,
+        "firebase_uid": wifi.firebase_uid,
+        "ssid": wifi.ssid,
        
     }),200
+    
+    
+@wifi_bp.route("/reset-device-wifi", methods=["POST"])
+def reset_device_wifi():
+
+    data = request.get_json()
+
+    device_id = data.get("device_id")
+
+    if not device_id:
+        return jsonify({
+            "success": False,
+            "message": "device_id required"
+        }), 400
+
+    try:
+
+        topic = f"{device_id}/control"
+
+        publish(
+            topic,
+           "earasWiFiCredentialsFromEEPROM"
+            
+        )
+
+        return jsonify({
+            "success": True,
+            "message": "Reset command published"
+        }), 200
+
+    except Exception as e:
+
+        print(e)
+
+        return jsonify({
+            "success": False,
+            "message": str(e)
+        }), 500
+        
+        
+@wifi_bp.route("/change-device-wifi", methods=["POST"])
+def change_device_wifi():
+
+    data = request.get_json()
+
+    device_id = data["device_id"]
+    firebase_uid = data["firebase_uid"]
+    ssid = data["ssid"]
+    password = data["password"]
+
+    topic = f"{device_id}/control"
+
+    publish(
+        topic,
+        f"wiFiCredentials:{ssid.strip()}:{password.strip()}"
+    )
+
+    wifi = DeviceWifi.query.filter_by(
+        device_id=device_id
+    ).first()
+
+    if wifi:
+
+        wifi.ssid = ssid
+        wifi.password = password
+        wifi.firebase_uid = firebase_uid
+
+    else:
+
+        wifi = DeviceWifi(
+            device_id=device_id,
+            firebase_uid=firebase_uid,
+            ssid=ssid,
+            password=password
+        )
+
+        db.session.add(wifi)
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True
+    })
