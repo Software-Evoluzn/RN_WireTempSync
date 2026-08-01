@@ -58,7 +58,7 @@ import auth from '@react-native-firebase/auth';
 import RNFetchBlob from 'react-native-blob-util';
 import IP_ADDRESS from '../services/ipconfig';
 
-import { verifyDeviceWifi ,resetDeviceWifi} from '../services/WifiService';
+import { verifyDeviceWifi,resetDeviceWifi } from '../services/WifiService';
 import { resetDeviceRemote } from './DeviceConfig';
 import { useAppTheme } from '../services/theme';
 
@@ -1208,10 +1208,10 @@ const TemperatureGraph = memo(
         selectedPanel === 'All Panels'
           ? device.panels
           : device.panels.filter(
-              (panel) =>
-                (panel.custom_name || `Panel ${panel.panel_no}`) ===
-                selectedPanel
-            );
+            (panel) =>
+              (panel.custom_name || `Panel ${panel.panel_no}`) ===
+              selectedPanel
+          );
 
       const includedPhases = new Set();
       panelsToInclude.forEach((panel) => {
@@ -1319,39 +1319,56 @@ const DeviceCard = memo(
           )}_${String(endDate.getFullYear()).slice(-2)}`;
           const filename = `wts_${startLabel}_to_${endLabel}.xlsx`;
 
-          // Save to the device's public Downloads folder. On Android this
-          // is routed through the system DownloadManager (via
-          // addAndroidDownloads), which is the only reliable way to write
-          // into the public Downloads folder on Android 10+ without
-          // requesting the heavy "All files access" permission — it also
-          // shows a normal download notification and appears in the
-          // Files/Downloads app right away.
+          // Android's DownloadManager (used below) doesn't reliably report
+          // real HTTP status codes back to JS, so we first do a plain
+          // fetch() status check. This hits the backend twice for a
+          // failed/empty range, but guarantees accurate error messages
+          // (e.g. "no data found" vs a generic failure) on every platform.
+          let checkResp;
+          try {
+            checkResp = await fetch(url);
+          } catch (networkError) {
+            console.warn('Export network error:', networkError);
+            Alert.alert('Export Failed', 'Could not reach the server. Check your connection and try again.');
+            return;
+          }
+
+          if (!checkResp.ok) {
+            let serverMessage = null;
+            try {
+              const errJson = await checkResp.json();
+              serverMessage = errJson?.error;
+            } catch (parseError) {
+              // response wasn't JSON, ignore and fall back to status-based message
+            }
+            console.warn('Export failed, status:', checkResp.status, serverMessage);
+            Alert.alert(
+              'Export Failed',
+              serverMessage ||
+              (checkResp.status === 404
+                ? 'No data found for the selected date(s).'
+                : `Server returned an error (status ${checkResp.status}). Check the backend logs.`)
+            );
+            return;
+          }
+
+          // Status check passed — now actually save the file.
           if (Platform.OS === 'android') {
             const { config, fs } = RNFetchBlob;
             const downloadDir = fs.dirs.LegacyDownloadDir;
 
-            const res = await config({
+            await config({
               fileCache: true,
               addAndroidDownloads: {
                 useDownloadManager: true,
                 notification: true,
+                mediaScannable: true,
                 title: filename,
                 description: 'WTS telemetry export',
                 mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 path: `${downloadDir}/${filename}`,
               },
             }).fetch('GET', url);
-
-            // NOTE: when useDownloadManager is true, the actual HTTP
-            // request is handed off to Android's system DownloadManager,
-            // so res.info() does not reliably report the real HTTP
-            // status here (it's frequently undefined even on success).
-            // If fetch() resolved without throwing, the download was
-            // successfully handed to DownloadManager. Genuine backend
-            // errors (404/500) are instead caught in the outer catch
-            // block below, since DownloadManager still saves the error
-            // response body to disk but fetch() consistently rejects
-            // in that case on this library version.
 
             Alert.alert('Export Saved', `${filename} has been saved to your Downloads folder.`);
           } else {
@@ -1362,22 +1379,10 @@ const DeviceCard = memo(
             const { config, fs } = RNFetchBlob;
             const localPath = `${fs.dirs.DocumentDir}/${filename}`;
 
-            const res = await config({
+            await config({
               fileCache: true,
               path: localPath,
             }).fetch('GET', url);
-
-            const statusCode = res.info().status;
-            if (statusCode !== 200) {
-              console.warn('Export failed, status:', statusCode);
-              Alert.alert(
-                'Export Failed',
-                statusCode === 404
-                  ? 'No data found for the selected date(s).'
-                  : `Server returned an error (status ${statusCode}). Check the backend logs.`
-              );
-              return;
-            }
 
             Alert.alert('Export Saved', `${filename} has been saved to:\n${localPath}`);
           }
@@ -1877,14 +1882,13 @@ const WtsDashboard = () => {
 
       navigation.navigate("ResetwifiNetwork", {
         product: selectedProduct?.serial_no,
-        verifiedData:verified
-        
+        verifiedData: verified
+
       });
 
     }
 
   }, [selectedProduct, navigation]);
-
   const handleBackPress = useCallback(() => {
     if (navigation.canGoBack()) {
       navigation.goBack();
